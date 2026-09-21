@@ -29,6 +29,12 @@ transparent risk signaling, never an accusation; every page carries the disclaim
 Raw DBs stay out of git (30–44 MB binaries live in Drive + zo.pub). Repo carries
 `data/apps.json` + the built `site/`.
 
+## Deletion tracking (v0.2)
+`scripts/check_deletions.py` → storefront recheck per app (`availability` + `deleted_log`),
+scored via `rubric.yaml` adjustments (`platform_removed` +15). Rerun order:
+`check_deletions.py` → `score.py` → `build_site.py` → commit/push. Snapshot row counts in the
+README so a future run can diff them.
+
 ## Refresh (Phase 2, not wired yet)
 Harvest via `https://gplayapiv2.fly.dev/api/apps/?country=<cc>&q=<term>` detail+permissions
 endpoints, same columns as LK; then rerun pipeline. Keep old harvests as separate corpus rows

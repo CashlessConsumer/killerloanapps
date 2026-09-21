@@ -72,11 +72,29 @@ State at the 2026-09-21 recheck: **IN 655 gone / 70 live · NG 88 gone / 29 live
 ## Roadmap
 
 - [x] Phase 1: warehouse + rubric scorer + static site + GH Pages
+- [x] Phase 1.1: multi-jurisdiction deletion tracking (availability recheck + `deletions.html` + GONE badges)
 - [x] v0.2: availability/deletion tracking across IN/NG/LK (743 gone of 997)
 - [ ] Phase 2: refresh lane (GPlayAPI v2 at gplayapiv2.fly.dev, scheduled harvests per jurisdiction)
 - [ ] Phase 3: APK lane at scale (`Skills/apkeep-fetch/` + MobSF/fintech-apk-scanner → I5 family + tracker/SDK graph)
 - [ ] Phase 4: tracing lane — shared-infrastructure OSINT (dev emails, sites on same hosts, entity graphs), WHOIS/DNS, cross-jurisdiction clone families
 - [ ] Complaint-pack generator (per-app authority route, starting with SL map in `Datasets/loanapps-lk/notes/`)
+
+## Deletion tracking (rubric v0.2)
+
+`scripts/check_deletions.py` re-checks every tracked app id against its own storefront
+(`currency`/national storefront per jurisdiction), records `live`/`deleted` into the
+`availability` table and appends one `deleted_log` row per missing app (first-seen date,
+note). Deletion adds the `platform_removed` adjustment (**+15**, toggleable in
+`rubric.yaml` → `adjustments`) and a `DELETED from Play` badge on jurisdiction pages.
+
+```
+python3 scripts/check_deletions.py      # recheck all jurisdictions, writes availability + deleted_log
+python3 scripts/score.py                # re-score (applies platform_removed)
+python3 scripts/build_site.py           # regenerate site incl. deletions.html
+```
+
+Latest run 2026-09-21: **743 of 997 tracked apps gone** (IN 655/725 · NG 88/117 · LK 0/155);
+1,055 log entries = 743 rechecked-absent + 312 corpus-era ids never in the scored set.
 
 ## Companion assets
 
