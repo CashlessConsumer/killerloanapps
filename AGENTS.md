@@ -50,6 +50,27 @@ pass `live` for live corpora only, or a comma list of corpus ids. Historical ids
 2020–22 corpus `loanapp_deletedapps` table (idempotent). Re-runs preserve the original `first_missing`.
 Query: `duckdb data/killerloanapps.duckdb -c "SELECT jurisdiction,status,COUNT(*) FROM availability GROUP BY 1,2"`.
 
+## Accumulated record (do not break this)
+Live corpora accumulate. `build_warehouse.py` unions **every** snapshot matching
+`data/harvests/<CC>_*.db` (oldest → newest, newest row wins) and then carries forward any live
+app present in the previous `data/apps.json` but absent from all current snapshots, marking it
+`gone_from_store` with its `last_seen`. `score.py` treats `gone_from_store` as the
+`platform_removed` (+15) signal exactly like a storefront-confirmed deletion, and pages show it as
+a deletion.
+
+Consequences: an app that vanishes from Play is remembered instead of dropping out of the corpus;
+`first_seen` / `last_seen` / `snapshots` on `apps` say when it was seen; `check_deletions.py` still
+confirms deletions authoritatively against the storefront. `app_id` is deduplicated within a corpus
+(earlier runs had duplicate rows that inflated app and permission counts — 1,226 apps is the true
+unique total).
+
+Raw snapshots are working files, gitignored; `refresh.sh` keeps the newest two per live country and
+drops older ones (the accumulated record lives in `apps.json` + the warehouse). So a missing old
+snapshot file is expected — never "fix" that by re-harvesting a fresh corpus over it.
+
+`refresh.sh` reads `LIVE_CC` (default `in lk`) and honours `SKIP_HARVEST=1` to exercise the rest of
+the cycle without a fresh harvest.
+
 ## Data provenance
 | Corpus | Source | Kind |
 |---|---|---|
