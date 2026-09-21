@@ -1,140 +1,124 @@
 # killerloanapps — multi-jurisdiction predatory loan-app tracker
 
-Platform for tracking predatory / abusive digital-lending apps across jurisdictions, scored with the
-**DeepStrat "Indicators for Detection of Abusive Digital Lenders" (Nov 2022) seven-family rubric**
-(archived at `docs/deepstrat-indicators-for-detection-of-abusive-digital-lenders.pdf`).
+Tracker for predatory / abusive digital-lending apps across jurisdictions, scored with the
+**DeepStrat "Indicators for Detection of Abusive Digital Lenders" (Nov 2022) seven-family rubric**.
+The rubric source is archived at `docs/deepstrat-indicators-for-detection-of-abusive-digital-lenders.pdf`.
 
-**Live:** https://killerloanapps.cashlessconsumer.in — until the Netlify CNAME is set:
-https://cashlessconsumer.github.io/killerloanapps/
+**Live:** https://cashlessconsumer.github.io/killerloanapps/ — custom domain `killerloanapps.cashlessconsumer.in`
+awaits the Netlify CNAME.
 
-Score is transparent risk signalling from public store metadata, never an accusation. Every page
-carries the disclaimer.
+## Corpora model
 
-## Corpora
+Two classes of corpus, and the distinction matters when reading any page:
 
-Two corpora are **live** (re-harvested on the refresh cycle, so new apps and new deletions are
-picked up) and two are **historical** (frozen snapshots, never re-harvested — they are the attrition
-record).
+- **live** — re-harvested on the refresh cycle, re-checked against the storefront, kept current.
+- **historical** — frozen era snapshots, never re-harvested. They exist to hold the earlier wave of
+  apps and their deletion record, so attrition can be measured rather than forgotten.
 
-| Corpus | Kind | Apps | Lending-scope | Window | Harvest |
-|---|---|---|---|---|---|
-| `IN` | live | 229 | 175 | 2026-09-21 | GPlayAPI v2 playbook run |
-| `LK` | live | 155 | 110 | 2026-09-20 | GPlayAPI v2 playbook run |
-| `IN_2020_2022` | historical | 725 | 692 | Dec 2020 – Feb 2022 | recovered dbhub copy (byte-exact) |
-| `NG_2022` | historical | 126 | 114 | Mar 2022 | DStudio x CC shared drive |
+| corpus_id | kind | Apps | Lending scope | Adjacent | Out of scope | Harvested | Gone from Play |
+|---|---|---|---|---|---|---|---|
+| `IN` | live | 229 | 175 | 28 | 26 | 2026-09-21 | 0 |
+| `LK` | live | 155 | 110 | 28 | 17 | 2026-09-20 | 0 |
+| `IN_2020_2022` | historical | 725 | 692 | 31 | 2 | 2022-02-27 | 655 |
+| `NG_2022` | historical | 126 | 100 | 26 | 0 | 2022-03-04 | 88 |
 
-1,235 apps, 2,232 app pages, 7 named clone families. Warehouse:
-`data/killerloanapps.duckdb` (`apps`, `permissions`, `deleted`, `scores`, `availability`,
-`deleted_log`, `corpora`). JSON dump: `data/apps.json`. Site: `site/` (plain static, no build deps).
+Headline counts on each page cover lending-scope apps only. Keyword harvesting pulls in noise
+(payments, shopping, ledgers, foreign listings); those captures stay in the data and are listed
+separately rather than silently dropped. Rules and per-id overrides live in `data/scope_rules.yaml`.
 
-Raw harvested DBs live in `data/harvests/` (tracked: IN + LK, 3.5 MB). The 2020-22 originals stay
-out of git (30–44 MB) and live in Drive + zo.pub (`Datasets/loanapps-in/`, `Datasets/loanapps-lk/`).
-
-## Scope rules
-
-Play keyword search returns plenty that is not a lending product. `data/scope_rules.yaml` sorts each
-capture into `lending` (headline counts), `adjacent`, or `out_of_scope` (payments, shopping,
-ledgers, foreign listings). Out-of-scope rows are shown separately on each corpus page, never in the
-headline. Add ids there when a capture is clearly not a lending product for that market.
+Sources: `IN_2020_2022` = `Datasets/loanapps-in/loanapps_dbhub_20220227.db` (byte-exact published
+dbhub copy, sha256 in Drive `CHECKSUMS.txt`); `NG_2022` = `Datasets/loanappsdata_NG.db` (DStudio x CC
+shared drive); `LK` and the 2026 India harvest = captured through the deployed GPlayAPI v2
+(`https://gplayapiv2.fly.dev`, source `Projects/google-play-api`). Raw DBs stay out of git; harvests
+under `data/harvests/` are in-repo.
 
 ## Pipeline
 
 ```
-data/harvests/*.db ──build_warehouse.py──▶ killerloanapps.duckdb ──score.py──▶ scores (rubric v0.2)
-                                 └──check_deletions.py──▶ availability/deleted_log
-                                 └──build_site.py──▶ site/
+storefront ──harvest.py──▶ data/harvests/<CC>_<date>.db (SQLite)
+                                   │
+                   build_warehouse.py ▶ data/killerloanapps.duckdb (apps · permissions · corpora · deleted)
+                                   │
+     check_deletions.py ───────────▶ availability · deleted_log   (live vs gone, per storefront)
+                                   │
+                        score.py ──▶ scores (rubric v0.2, composite + band + flags)
+                                   │
+                    build_site.py ─▶ site/ (index · live + historical corpus pages · app pages · deletions · methodology)
 ```
 
-Entry point for the whole cycle:
+`bash scripts/refresh.sh [LABEL]` runs the whole cycle (harvest live corpora → warehouse →
+availability recheck → score → site → commit + push). `data/refresh-<date>.log` keeps the run's output.
 
-```bash
-bash scripts/refresh.sh            # harvest live corpora → warehouse → recheck → score → site → push
-```
+**Refresh automation:** *Weekly Killerloanapps Predatory Loan App Tracker Refresh* — Mondays 06:30 IST,
+reports to Discord `#policy-research` (new commit, per-corpus counts, newly recorded deletions,
+top new apps by score, suspected new clone families, any failed step).
 
-- `scripts/harvest.py` — `--country in|lk --label YYYY-MM-DD`; detail + permissions endpoints, same
-  columns as the original corpora incl. legal-entity and data-safety fields.
-- `scripts/build_warehouse.py` — merge corpora, normalise schema, carry provenance per row.
-- `scripts/check_deletions.py` — storefront recheck per app id (`/api/apps/<id>?country=<cc>`);
-  writes `availability`, appends `deleted_log` (first-seen date + evidence note), never overwrites
-  an existing `first_missing`. Live-only via `live`, one corpus via its id, all by default.
-- `scripts/score.py` — 7 families, composite 0–100, band, per-family flags.
-- `scripts/build_site.py` — regenerate the whole static site.
-
-Automation: **Weekly Killerloanapps Predatory Loan App Tracker Refresh** (Mondays 06:30 IST) runs
-`refresh.sh`, verifies the deployed pages, and posts a terse diff to Discord `#policy-research`.
-
-## Rubric (v0.2 — risk signals, not verdicts)
+## Score (rubric v0.2 — risk signals, not verdicts)
 
 | Family | Weight | Evidence |
 |---|---|---|
-| I1 Brand/ASO abuse | 15 | package-name keyword stuffing (loan/cash/credit segments) |
-| I2 Metadata opacity | 25 | privacy policy missing or on Google/static hosts; no developer website |
-| I3 Physical presence | 15 | no legal entity/contact; non-local entity; missing phone |
-| I4 Cyber hygiene | 10 | app stale >90 days (and >1 year) at harvest |
-| I5 3rd-party supply chain | 15 | APK lane pending (data-safety JSON cross-signal where present) |
-| I6 Permission excess | 15 | dangerous permissions vs jurisdiction baseline |
-| I7 Responsiveness | 5 | reviews lane pending |
+| I1 Brand/ASO abuse | 15 | package-name keyword stuffing (loan/cash/credit/rupee/naira segments) |
+| I2 Metadata opacity | 25 | privacy policy missing or on free hosts (docs.google.com, sites.google.com…); no developer website |
+| I3 Physical presence | 15 | legal entity / address / phone absent, or address inconsistent with the jurisdiction |
+| I4 Cyber hygiene | 10 | listing stale >90 days, and >1 year, at harvest time |
+| I5 Third-party supply chain | 15 | pending APK lane (data-safety JSON used as a cross-signal where present) |
+| I6 Permission excess | 15 | dangerous permissions (contacts, SMS, call log, location, mic, camera) vs jurisdiction baseline |
+| I7 Responsiveness | 5 | pending reviews-endpoint lane |
 
-Bands: `0–24 low · 25–49 elevated · 50–74 high · 75+ severe`. When I5/I7 evidence is missing the
-composite is `partial` (rescaled over available weights) and every page says so.
-v0.2 adds `adjustments.platform_removed: +15` for apps gone from their own storefront.
+Adjustments applied after family scoring, each flagged in the output: `platform_removed` **+15** when
+the listing is gone from its storefront. Bands: `0–24 low · 25–49 elevated · 50–74 high · 75+ severe`.
+Families without evidence score `null` and the composite is marked `partial` (rescaled over available
+weights) — the site says so on every affected page.
 
-## Result to be honest about: metadata signals have saturated
+### What the scores currently show, and the caveat that matters
 
-| Corpus | apps | has legal entity | has privacy policy | has dev website |
+| corpus | low | elevated | high | severe |
 |---|---|---|---|---|
-| IN (2026) | 229 | 99.6% | 100% | 91.7% |
-| LK (2026) | 155 | 100% | 100% | 83.9% |
-| IN_2020_2022 | 725 | 0% | 99.9% | 44.4% |
-| NG_2022 | 126 | 0% | 100% | 45.2% |
+| `IN` (live, 2026) | 172 | 3 | 0 | 0 |
+| `LK` (live, 2026) | 91 | 19 | 0 | 0 |
+| `IN_2020_2022` | 41 | 424 | 222 | 5 |
+| `NG_2022` | 14 | 44 | 42 | 0 |
 
-Store-metadata scoring discriminates strongly on the 2020-22 corpora (IN: 424 elevated, 222 high,
-5 severe) and almost not at all on the 2026 harvests (IN: 172 low, 3 elevated). Two reasons, and
-they need separating:
-
-1. **Regime change.** Play now requires legal-entity disclosure and a privacy policy, so the fields
-   I2/I3 lean on are populated for effectively every 2026 listing. The same list in 2020-22 shows
-   0% legal entity and ~45% website presence.
-2. **Capture artefact.** The 2020-22 harvest predates those Play requirements, so I3 flags
-   `era_no_legal_fields` rather than measuring concealment. Cross-era I3 comparisons are not like
-   for like.
-
-The honest reading: **metadata-only scoring cannot discriminate in the 2026 ecosystem.** What
-survives is not obviously cleaner — the abuse surface (collections harassment, hidden fees,
-off-metadata SDK data access) does not appear in store metadata. That is why the discriminative
-lanes still to build are I5 (APK/SDK) and I7 (reviews/complaints), and why live-corpus bands should
-not be read as a clean bill of health.
+The 2026 live corpora score almost entirely `low` — not because the market is clean, but because
+Google Play's post-2022 listing rules now force the disclosure fields I2 and I3 measure. Legal-entity
+fields are populated for 99.6% of the live India corpus (0% of the 2020–22 corpus); a developer website
+is present for 91.7% (44.4%). **A `low` band on a live app is not evidence of safe lending practice** —
+harassment, collection abuse, fee stacking and data misuse do not appear in store metadata. Reading the
+v0.2 score as "safe" misreads it; the rubric measures metadata opacity, and that baseline has moved.
+This is why the APK lane (I5) and the tracing lane matter more than they did for the historical corpora.
 
 ## Deletion tracking
 
-Availability state after the 2026-09-21 sweep (all corpora):
+`scripts/check_deletions.py` re-checks every tracked app id against its own storefront
+(`/api/apps/<id>?country=<cc>`), writing `availability` (jurisdiction, app_id, last_checked, status)
+and appending `deleted_log` (first_missing, last_live, note). Re-runs preserve the original
+`first_missing`; a listing that returns is recorded as live again. Historical ids are seeded from the
+2020–22 corpus's own `loanapp_deletedapps` table, so `deleted_log` carries the full attrition record
+(**1,055** entries: 743 recheck-absent + 312 corpus-era ids never in the scored set).
 
-| Corpus | live | deleted |
-|---|---|---|
-| IN (2026) | 229 | 0 |
-| LK (2026) | 155 | 0 |
-| IN_2020_2022 | 70 | 655 |
-| NG_2022 | 29 | 88 |
+```bash
+python3 scripts/check_deletions.py        # all corpora by default; pass "live" for live only
+python3 scripts/score.py                  # applies platform_removed +15
+python3 scripts/build_site.py             # GONE badges + deletions.html
+```
 
-755 of 1,235 tracked apps are gone from their storefront; `deleted_log` holds 1,056 entries
-(755 rechecked-absent + 301 corpus-era ids never in the scored set). Deletion is one of the strongest
-end-state signals: either the platform enforced against abuse, or the operator burned the listing.
-Either way the snapshot is the record. See `site/deletions.html`.
+State at the 2026-09-21 recheck — `IN_2020_2022` 655 gone / 70 live · `NG_2022` 88 gone / 29 live ·
+`IN` 229 live · `LK` 155 live. The live corpora being fully present is the expected shape: they were
+harvested days ago.
 
 ## Roadmap
 
-- [x] Warehouse + rubric scorer + static site + GH Pages
+- [x] Warehouse + rubric scorer + static site + GitHub Pages
 - [x] Multi-jurisdiction deletion tracking (`availability`, `deleted_log`, `deletions.html`, GONE badges)
-- [x] Live vs historical corpus split + keyword-noise scope rules
-- [x] Scheduled refresh lane (`refresh.sh`, weekly Monday 06:30 IST automation)
-- [ ] APK lane at scale (`Skills/apkeep-fetch/` + MobSF → I5 family, tracker/SDK graph)
-- [ ] Reviews lane (I7) + complaint-corpus ingestion
-- [ ] Tracing lane — shared-infrastructure OSINT (dev emails, shared hosts), WHOIS/DNS, cross-jurisdiction clone families
-- [ ] Complaint-pack generator (per-app authority route; SL map in `Datasets/loanapps-lk/notes/`)
+- [x] Corpora model: live vs frozen historical; scope rules; live India 2026 harvest
+- [x] Refresh lane: `scripts/harvest.py` + `scripts/refresh.sh`, weekly automation
+- [ ] APK lane at scale (`Skills/apkeep-fetch/` → MobSF / `Skills/fintech-apk-scanner`): I5 family, tracker/SDK graph, certificate reuse
+- [ ] Tracing lane: shared-infrastructure OSINT (developer emails, co-hosted sites, entity graphs), WHOIS/DNS, cross-jurisdiction clone families
+- [ ] Complaint-pack generator: per-app authority route, starting from the Sri Lanka map in `Datasets/loanapps-lk/notes/`
 
 ## Companion assets
 
-- `CashlessConsumer/killerloanapps-lk` — LK dataset repo (Sri Lanka; sent to the Kavinda request)
+- `CashlessConsumer/killerloanapps-lk` — Sri Lanka dataset repo (built for the Kavinda Welagedara request)
 - `Datasets/loanapps-lk/` — LK DB, README, authority map, checksums
-- `Datasets/loanapps-in/` — recovered India DBs (4 versions) + provenance + builder code
-- `Projects/google-play-api/` — GPlayAPI v2, deployed at `gplayapiv2.fly.dev`
+- `Datasets/loanapps-in/` — the four recovered India DBs + provenance and checksums
+- `https://zo.pub/cashlessconsumer/loanapps-db` and `https://zo.pub/cashlessconsumer/loanapps-lk` — off-repo archives

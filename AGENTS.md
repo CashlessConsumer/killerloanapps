@@ -3,7 +3,7 @@
 ## What this is
 Multi-jurisdiction predatory loan-app tracker. Rubric = DeepStrat "Indicators for Detection of
 Abusive Digital Lenders" (Nov 2022), archived at `docs/deepstrat-indicators-*.pdf`. Score is
-transparent risk signalling, never an accusation; every page carries the disclaimer.
+transparent risk signaling, never an accusation; every page carries the disclaimer.
 
 ## Non-negotiables
 - **Evidence traceability**: every number on a page comes from the warehouse; every score point
@@ -12,58 +12,66 @@ transparent risk signalling, never an accusation; every page carries the disclai
   regenerate, and note the change in this file. Old scores must never silently mix with new.
 - **Partial scores are visible**: when I5/I7 evidence is missing the composite is `partial` and
   pages say so. Never present a rescaled score as full.
-- **Historical corpora are frozen.** `IN_2020_2022` and `NG_2022` must never be re-harvested or
-  re-fetched — they are the attrition/era baseline. Only `kind='live'` corpora get harvested.
-- **Metadata saturation is stated, not hidden.** Live-corpus scores are dominated by `low` because
-  Play's 2022+ disclosure rules populate the fields I2/I3 measure. Never present a live-corpus
-  `low` band as evidence that an app is safe.
+- **Historical corpora are frozen**: `IN_2020_2022` and `NG_2022` are never re-harvested and never
+  merged into a live corpus. They exist to hold the earlier wave and its deletion record.
+- **Metadata opacity is not safety**: a live `low` band means the store metadata looks clean, not
+  that the lender behaves. Never let site copy or a report imply the latter.
 - **PII**: no reviewer names/avatars. App metadata only.
 - **Static site, no build deps**: `site/` is plain HTML/CSS from `scripts/build_site.py`.
-  Deploy via the GitHub Actions pages workflow; CNAME stays `killerloanapps.cashlessconsumer.in`.
+  Deploy via the GitHub Actions pages workflow (`upload-pages-artifact` from `site/`); CNAME stays
+  `killerloanapps.cashlessconsumer.in`.
 
-## Pipeline order
-```
-scripts/harvest.py --country in|lk --label YYYY-MM-DD   # live corpora only
-scripts/build_warehouse.py                              # merge corpora -> data/killerloanapps.duckdb
-scripts/check_deletions.py                              # availability + deleted_log (live-only: pass `live`)
-scripts/score.py                                        # rubric, incl. platform_removed adjustment
-scripts/build_site.py                                   # site/
-git add -A && git commit && git push                    # GH Pages workflow deploys
-```
-All of it in one command: `bash scripts/refresh.sh [LABEL]`.
+## Corpus model
+`corpora` table: `corpus_id, label, short, kind (live|historical), country, harvested_on, seed_date,
+description, source`. `jurisdiction` on `apps`/`scores` is the `corpus_id`. Page paths:
+live → `jurisdiction/<id>.html`, historical → `historical/<id>-<span>.html` (see `page_path()`).
 
-## Schemas (must agree across all four scripts)
-- `corpora`: `corpus_id, label, short, kind (live|historical), country, harvested_on, seed_date, description, source`
-- `apps`: keyed `(jurisdiction, app_id)`; `jurisdiction` = corpus_id (e.g. `IN`, `IN_2020_2022`)
-- `scores`: `jurisdiction, app_id, i1..i7, composite, band, partial, flags, rubric_version, scored_on, scope`
-- `availability`: `jurisdiction, app_id, last_checked, status (live|deleted|error)`
-- `deleted_log`: `jurisdiction, app_id, first_missing, last_live, note`
-- DuckDB note: `con.execute(...)` returns the connection, not a cursor — always `.fetchall()`
-  before iterating (this bug silently disabled deletion seeding once).
-
-## Corpora
-| Corpus | Kind | Source | Notes |
-|---|---|---|---|
-| `IN` | live | `data/harvests/IN_*.db` | GPlayAPI v2 playbook run; re-harvested |
-| `LK` | live | `data/harvests/LK_*.db` | GPlayAPI v2 playbook run; re-harvested |
-| `IN_2020_2022` | historical | `Datasets/loanapps-in/loanapps_dbhub_20220227.db` | byte-exact dbhub copy, frozen |
-| `NG_2022` | historical | `Datasets/loanappsdata_NG.db` | DStudio x CC shared drive original, frozen |
-
-Raw originals stay out of git (30–44 MB); live harvests (`data/harvests/`, ~3.5 MB) are tracked.
+Adding a jurisdiction = add a row to `CORPORA` in `build_warehouse.py`, a keyword set in
+`harvest.py`'s `TERMS`/`LANG` maps, a country code in `check_deletions.py`'s `CC`, and a
+`LOCAL_HINT` entry in `score.py`.
 
 ## Scope rules
-`data/scope_rules.yaml` splits every capture into `lending` (headline counts) / `adjacent` /
-`out_of_scope`. Out-of-scope rows appear in a separate table on the corpus page. Add ids there when
-a keyword capture is clearly not a lending product for that market — never by loosening the keyword
-list in `harvest.py`, since the noise is itself evidence of what Play search returns.
+`data/scope_rules.yaml` classifies each app as `lending` (headline), `adjacent` (listed separately),
+or `out_of_scope` (keyword noise: payments, shopping, ledgers, foreign listings). Headline counts,
+bands and the index use `lending` only; adjacent and out-of-scope rows render in their own tables so
+nothing is silently dropped. Add an id under the right list when a capture is clearly not a lending
+product for that market, then re-run `score.py` + `build_site.py`.
 
-## Freshness
-- `bash scripts/refresh.sh` is the only supported refresh path.
-- Weekly automation (Mondays 06:30 IST) runs it, verifies the four deployed URLs return 200, and
-  posts a diff to Discord `#policy-research`. Idempotent: no changes → no commit → no deploy.
-- Never run a refresh against historical corpora, and never `git push` from a partially built site.
+## Pipeline order
+`harvest.py` → `build_warehouse.py` → `check_deletions.py` → `score.py` → `build_site.py` → commit `site/`.
+`bash scripts/refresh.sh [LABEL]` chains all of it (live corpora only) and pushes; log at
+`data/refresh-<LABEL>.log`. Weekly automation runs it Mondays 06:30 IST and reports to Discord
+`#policy-research` (id 1540886397622161458).
+
+## Deletion tracking (v0.2)
+`scripts/check_deletions.py` → storefront recheck per app (`availability` + `deleted_log`),
+scored via `rubric.yaml` adjustments (`platform_removed` +15). Default scope is every corpus;
+pass `live` for live corpora only, or a comma list of corpus ids. Historical ids are seeded from the
+2020–22 corpus `loanapp_deletedapps` table (idempotent). Re-runs preserve the original `first_missing`.
+Query: `duckdb data/killerloanapps.duckdb -c "SELECT jurisdiction,status,COUNT(*) FROM availability GROUP BY 1,2"`.
+
+## Data provenance
+| Corpus | Source | Kind |
+|---|---|---|
+| `IN` | `data/harvests/IN_2026-09-21.db` (GPlayAPI v2) | live, re-harvested |
+| `LK` | `data/harvests/LK_2026-09-20.db` + `Datasets/loanapps-lk/` | live, re-harvested |
+| `IN_2020_2022` | `Datasets/loanapps-in/loanapps_dbhub_20220227.db` | frozen historical (byte-exact dbhub copy) |
+| `NG_2022` | `Datasets/loanappsdata_NG.db` | frozen historical (DStudio x CC shared drive) |
+
+Raw 30–44 MB DBs stay out of git (Drive + zo.pub archives carry them, with `CHECKSUMS.txt`).
+
+## Known findings worth not re-deriving
+- 2026 live corpora score almost entirely `low`; legal-entity fields are populated for 99.6% of live
+  India apps vs 0% of the 2020–22 corpus (developer website 91.7% vs 44.4%). Play's post-2022 rules
+  moved the I2/I3 baseline, so v0.2 scores discriminate much less on recent data. The abuse signal has
+  moved to practice (collections, fees, data misuse), which store metadata does not carry — hence the
+  priority of the APK (I5) and tracing lanes.
+- Clone families already visible in the live corpora: a CashGedara/CashMate/FreedomCash/CashMellon/
+  SkyWallet/SmartCredit meta-app network, and a KREDITME/MyKredit/DrCash trio — inspect shared legal
+  entity but do not assert common ownership without the tracing lane's evidence.
+- The historical India corpus's attrition is the platform's strongest long-run signal: 655 of 725 gone.
 
 ## Related
-- LK origin story + authority map: `Datasets/loanapps-lk/notes/2026-09-20-sl-authority-map.md`
+- LK origin story + authority map: `Datasets/loanapps-lk/notes/` (Kavinda Welagedara request, 2026-09-19)
 - GPlayAPI v2: `Projects/google-play-api/` (deployed at gplayapiv2.fly.dev)
 - APK scanning lane: `Skills/fintech-apk-scanner/`, `Skills/apkeep-fetch/`
