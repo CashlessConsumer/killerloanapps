@@ -51,7 +51,17 @@ availability recheck → score → site → commit + push). `data/refresh-<date>
 
 **Refresh automation:** *Weekly Killerloanapps Predatory Loan App Tracker Refresh* — Mondays 06:30 IST,
 reports to Discord `#policy-research` (new commit, per-corpus counts, newly recorded deletions,
+top new apps by score, suspected new clone families, any failed step).**Refresh automation:** *Weekly Killerloanapps Predatory Loan App Tracker Refresh* — Mondays 06:30 IST,
+reports to Discord `#policy-research` (new commit, per-corpus counts, newly recorded deletions,
 top new apps by score, suspected new clone families, any failed step).
+
+The refresh is **accumulating, not replacing**. Every harvest writes a dated snapshot; the
+warehouse unions all of them (newest row wins), and any live app that is absent from the newest
+snapshot is carried forward from the previous `data/apps.json` with `last_seen` +
+`gone_from_store`. So an app that disappears from the store stays in the corpus as a recorded
+deletion — `platform_removed` (+15) in the score and a `DELETED from Play` badge — instead of
+vanishing along with its evidence. Raw snapshots are gitignored working files (the newest two per
+country are kept; the accumulated record lives in `data/apps.json` and the warehouse).
 
 ## Score (rubric v0.2 — risk signals, not verdicts)
 
