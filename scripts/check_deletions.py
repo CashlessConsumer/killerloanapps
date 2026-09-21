@@ -41,7 +41,8 @@ def main(limit=None, only=None):
     n_seed = 0
     try:
         s = sqlite3.connect("file:/home/workspace/Datasets/loanapps-in/loanapps_dbhub_20220227.db?mode=ro", uri=True)
-        known = {(j, a) for j, a in con.execute("SELECT jurisdiction, app_id FROM deleted_log")}
+        known = {(j, a) for j, a in con.execute(
+            "SELECT jurisdiction, app_id FROM deleted_log").fetchall()}
         for aid, d in s.execute("SELECT appId, date FROM loanapp_deletedapps"):
             key = ("IN_2020_2022", aid)
             if key not in known:
