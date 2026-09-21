@@ -38,3 +38,12 @@ endpoints, same columns as LK; then rerun pipeline. Keep old harvests as separat
 - LK origin story + authority map: `Datasets/loanapps-lk/` (Kavinda Welagedara request, 2026-09-19)
 - GPlayAPI v2: `Projects/google-play-api/` (deployed at gplayapiv2.fly.dev)
 - APK scanning lane: `Skills/fintech-apk-scanner/`, `Skills/apkeep-fetch/`
+
+## Availability / deletion tracking (v0.2)
+- `scripts/check_deletions.py` — per-app live check via `/api/apps/<id>?country=<cc>`; writes `availability`
+  (jurisdiction, app_id, last_checked, status) and appends `deleted_log` (first_missing, note). Re-runs keep the
+  original `first_missing` for apps already gone.
+- `rubric.yaml` v0.2 adds `adjustments.platform_removed: +15` plus the `platform_removed` signal.
+- Site: `GONE` badge on app pages, "N of M apps gone" line per jurisdiction page, `deletions.html` log with evidence source.
+- Query: `duckdb data/killerloanapps.duckdb -c "SELECT jurisdiction,status,COUNT(*) FROM availability GROUP BY 1,2"`
+- 2026-09-21 recheck: IN 655/725 gone · NG 88/117 gone · LK 0/155 gone.

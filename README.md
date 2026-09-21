@@ -53,9 +53,26 @@ Bands: `0–24 low · 25–49 elevated · 50–74 high · 75+ severe`.
 **Disclaimer:** scores are automated risk signals for researchers and journalists, not
 adjudications. Nothing here accuses any developer of a crime; dispute via the methodology page.
 
+## Availability tracking (v0.2)
+
+`scripts/check_deletions.py` re-checks every app_id against its own storefront via gplayapiv2
+(`/api/apps/<id>?country=<cc>`), writing an `availability` row per app and appending to
+`deleted_log` (`first_missing` + evidence note). A listing vanishing is one of the strongest
+end-state signals: either the platform enforced against abuse, or the operator burned the listing.
+
+```bash
+python3 scripts/check_deletions.py   # 997 apps, ~0.5s each
+python3 scripts/score.py             # applies platform_removed +15 (rubric v0.2)
+python3 scripts/build_site.py        # refreshes GONE badges + deletions.html
+```
+
+State at the 2026-09-21 recheck: **IN 655 gone / 70 live · NG 88 gone / 29 live · LK 0 gone / 155 live**
+— 743 of 997 tracked apps are gone, plus 312 corpus-era deletion records outside the tracked set kept as history.
+
 ## Roadmap
 
 - [x] Phase 1: warehouse + rubric scorer + static site + GH Pages
+- [x] v0.2: availability/deletion tracking across IN/NG/LK (743 gone of 997)
 - [ ] Phase 2: refresh lane (GPlayAPI v2 at gplayapiv2.fly.dev, scheduled harvests per jurisdiction)
 - [ ] Phase 3: APK lane at scale (`Skills/apkeep-fetch/` + MobSF/fintech-apk-scanner → I5 family + tracker/SDK graph)
 - [ ] Phase 4: tracing lane — shared-infrastructure OSINT (dev emails, sites on same hosts, entity graphs), WHOIS/DNS, cross-jurisdiction clone families
