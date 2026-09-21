@@ -10,26 +10,23 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 LABEL="${1:-$(date +%F)}"
-LIVE_CC="${LIVE_CC:-in lk}"
+LIVE_CC="${LIVE_CC-in lk}"
+SKIP_HARVEST="${SKIP_HARVEST:-0}"
 LOG="data/refresh-${LABEL}.log"
 mkdir -p data
 
 {
   echo "=== killerloanapps refresh $LABEL · $(date -u +%FT%TZ) ==="
-  for cc in $LIVE_CC; do
-    echo "--- harvest $cc ---"
-    python3 scripts/harvest.py --country "$cc" --label "$LABEL"
-  done
+  if [ "$SKIP_HARVEST" = "1" ]; then
+    echo "--- harvest skipped (SKIP_HARVEST=1) ---"
+  else
+    for cc in $LIVE_CC; do
+      echo "--- harvest $cc ---"
+      python3 scripts/harvest.py --country "$cc" --label "$LABEL"
+    done
+  fi
   echo "--- warehouse ---"
   python3 scripts/build_warehouse.py
-  echo "--- prune old snapshots (keep newest 2 per live corpus) ---"
-  for cc in $LIVE_CC; do
-    # the accumulated record lives in data/apps.json + the warehouse, so old raw
-    # snapshots are not needed; keep two for safety, drop the rest (untracked).
-    ls -1t data/harvests/${cc^^}_*.db 2>/dev/null | tail -n +3 | while read -r f; do
-      echo "pruned $f"; rm -f "$f"
-    done
-  done
   echo "--- availability recheck (live corpora) ---"
   python3 scripts/check_deletions.py
   echo "--- score ---"
