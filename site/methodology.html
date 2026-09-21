@@ -1,0 +1,28 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>Methodology</title>
+<link rel="stylesheet" href="style.css"></head><body><main>
+<p class="mut"><a href="index.html">killerloanapps</a> · jurisdictions: <a href="jurisdiction/lk.html">LK</a> · <a href="jurisdiction/in.html">IN</a> · <a href="jurisdiction/ng.html">NG</a> · <a href="methodology.html">methodology</a></p>
+
+<h1>Methodology — rubric 0.1</h1>
+<p>Framework: <i>Indicators for Detection of Abusive Digital Lenders</i> (DeepStrat, Nov 2022) — the 7-indicator-family
+toolkit CashlessConsumer co-developed, operationalised here as a transparent weighted score over public app-store data.
+Weights and thresholds are versioned in <code>rubric.yaml</code> in the repo; every score is reproducible from the warehouse.</p>
+<h2>Families</h2>
+<table><tr><th>Family</th><th>Weight</th><th>What it measures</th><th>Status</th></tr><tr><td><b>I1_brand_aso</b> Brand &amp; ASO abuse</td><td>15</td><td></td><td>pending</td></tr><tr><td><b>I2_metadata_opacity</b> Metadata opacity</td><td>25</td><td></td><td>pending</td></tr><tr><td><b>I3_physical_presence</b> Physical presence &amp; paperwork</td><td>15</td><td></td><td>pending</td></tr><tr><td><b>I4_cyber_hygiene</b> Cyber hygiene</td><td>10</td><td></td><td>pending</td></tr><tr><td><b>I5_supply_chain</b> 3rd-party supply chain</td><td>15</td><td></td><td>pending</td></tr><tr><td><b>I6_permissions</b> Permission excess</td><td>15</td><td></td><td>pending</td></tr><tr><td><b>I7_responsiveness</b> Responsiveness</td><td>5</td><td></td><td>pending</td></tr></table>
+<h2>Bands</h2><p><b>low</b> 0–25 · <b>elevated</b> 25–50 · <b>high</b> 50–75 · <b>severe</b> 75–100 (composite 0–100; partial scores renormalise over computed families and are marked "partial").</p>
+<h2>What this is not</h2>
+<ul>
+<li>Not a legal determination — indicators are circumstantial signals, some (like ASO keyword stuffing) are only weakly associated with abuse.</li>
+<li>Not a substitute for APK analysis — I5 (supply chain: shared SDKs with surveillance/fraud vendors) needs on-device binary inspection; the APK lane is phase 3.</li>
+<li>Not abuse-proof — ratings/reviews are gameable, which is exactly why metadata and paperwork carry more weight.</li>
+</ul>
+<h2>Data provenance</h2>
+<ul>
+<li>LK: own harvest, 2026-09-20, GPlayAPI v2 (<code>country=lk</code>), 176 candidates → 155 apps after keyword filter.</li>
+<li>IN: the published killerloanapps corpus (Dec 2020 – Feb 2022), 725 apps incl. 339 later deleted from Play.</li>
+<li>NG: Mar 2022 corpus, 126 apps.</li>
+</ul>
+<p>Corpora are historical snapshots: scores describe the app as captured on <code>harvested_on</code>, not today.</p>
+<div class="disclaimer"><b>Risk signals, not verdicts.</b> Scores flag <i>indicators</i> of abusive-lending behaviour from public app-store data. A high score is not proof of illegality; a low score is not a safety certificate. See <a href="methodology.html">methodology</a>.</div>
+<footer>CashlessConsumer · data: Play Store metadata + permissions, own harvests · scoring: rubric 0.1 (experimental) · <a href="methodology.html">what this score is not</a></footer>
+</main></body></html>

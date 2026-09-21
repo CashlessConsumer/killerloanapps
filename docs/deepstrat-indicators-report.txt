@@ -1,0 +1,796 @@
+Indicators for detection of abusive digital lenders.
+
+Context
+Data sources available
+Methodology
+Overview of Indicators
+Deep dive of select indicators
+Permission Analysis
+3rd Party Provider analysis.
+App Metadata Analysis.
+3rd Party Digital infrastructures for lending
+LoanApps Database Generator
+
+1
+1
+1
+5
+9
+9
+11
+12
+13
+15
+
+Context
+Digital lending is growing rapidly and along with the growth there has been a noticeable rise
+in consumer harms. These harms arise due to a variety of factors such as regulatory void on
+upcoming technology and data use in the financial sector, digital literacy, financial literacy
+leading to exploitative practices and suboptimal outcomes such as eroding consumer trust.
+Identification of abusive practices to overcome the harms hence becomes a key issue
+towards a common good for everyone in the ecosystem. This brief aims at documenting a
+list of indicators to spot abusive digital lenders from publicly available metadata around
+digital loan apps.
+
+Data sources available
+1. Google Play - Source metadata about apps by country, metadata about each app,
+their permissions, reviews, etc.
+2. List of 3rd party providers offering services to digital lenders.
+
+Methodology
+1. Fetch list of loan apps from Google Play FINANCE category in the country (e.g.
+Nigeria), search results in Google Play store for popular search terms and similar
+apps. This could also be used to run for any country and get a list of loan apps.
+
+Screenshot of script
+2. Fetch app metadata including the permissions data for all apps from the above list.
+a. Following are the various attributes available for a given app as metadata,
+along with some notes
+Attribute
+
+Text
+
+ID
+
+Unique ID for the record
+
+Title
+
+Title of the app
+
+Description
+
+Description
+
+DescriptionHTML
+
+Description in HTML
+
+Notes
+
+Summary
+
+Summary of the app
+
+installs
+
+Installs as displayed on
+Google Play
+
+maxInstalls
+
+Install data is gameable with bot downloads
+for higher listing in search, doesn't represent
+actual user base as users may have installed,
+Minimum Installs
+but never used / installed via other app stores
+Approx * Maximum Installs / sideloaded.
+
+score
+
+Weighted average of
+ratings
+
+scoreText
+
+Rounded off score
+displayed to user
+
+ratings
+
+Total number of users who
+rated
+
+1*
+
+1 Star
+
+2*
+
+2 Star
+
+3*
+
+3 Star
+
+4*
+
+4 Star
+
+5*
+
+5 Star
+
+price
+
+For paid apps
+
+IsFree
+
+Free/Paid filter
+
+currency
+
+Currency for app pricing
+
+minInstalls
+
+Ratings and reviews are gameable too,
+usually are gamed widely across apps.
+
+0 for non-free, 1 for Free. Most apps are
+usually free.
+
+FreeText
+
+In App Purchase
+
+In app purchase - with
+GPlay payment support
+options
+
+Size
+
+App Size
+
+androidVersion
+
+Minimum Android API
+level
+
+androidVersionText
+
+Textual android version
+support note
+
+Developer
+
+Name of Developer
+
+Developer ID
+
+Developer ID
+
+Developer Email
+
+Developer Email
+
+developerWebsite
+
+Developer Website
+
+developerInternalID
+
+Internal ID of developer in
+Google Play
+
+0 for no IAP, 1 for IAP Supported. Most apps
+don't use IAP
+
+Screenshot of permissions table of the database
+3. Additionally perform malware analysis on the app to list the communicating servers
+to build a 3rd party provider database of loan apps.
+a. Single app takes 15-20 minutes to manually go through the data (scope for
+automating this process but this would then still need to be analysed).
+b. Indicative list of third parties in India, identified after malware analysis of loan
+apps. Constant monitoring of apps to identify vendor supply chain is key to
+mapping the support ecosystem and spot bad actors early on.
+
+4. Analyse the above data for indicators to spot potentially harmful lenders.
+
+Overview of Indicators
+
+1. Brand, Advertising – Trademark violation, phishing. Automatable, with some
+manual review
+● From a consumer standpoint, the first interaction with a lender is through
+advertising and brand awareness at the app store / mobile ad / offline ad
+about the lending app. While disproportionate spend on marketing is a flag for
+the consumer, a trustable brand differentiates itself by providing the
+commitment to customer, while most apps that try to gain trust by
+piggybacking themselves with other established brands by similar sounding
+names, trademarks are an early red flag indicator.
+● E.g:- CashTM (PayTM font, colour scheme, maybe trademark highjack)
+● Excessive App Store Optimisation (ASO) - CashBean1 (IN) –
+com.loan.cash.credit.easy.dhan.quick.udhaar.lend.game.jaldi.paisa.borrow.ru
+pee.play.kredit
+○ A similar ASO strategy being practised in Nigeria by KashCredit 2 indicates re-use of same playbook / possibly same actors.
+Actors are using the same playbook, but it may also be the same actors.
+2. App Metadata
+●
+
+●
+
+●
+
+●
+
+Release date - Analysis of metadata from Google Play / other app stores
+could indicate if the app predates the legal entity which owns the app. In the
+real world, most apps get built after a legal entity is formed and exceptions to
+this rule are a high risk indicator that the app is run by anonymous /
+unidentified, potentially rogue actors. This could be automated by extracting
+and comparing the release date from Google Play and an incorporation date
+from a third party database.
+Developer email ID - This also indicates if the same entity owns the app / if
+the app is vendor managed / other partnership structures. Due diligence on
+entity data from these can help consumers spot rogue lenders.
+○ It may be possible to scrape companies data, to find out who is behind
+the apps, but it varies country to country. Also company registration
+process/scrutiny/process different across countries.
+Privacy policy - The language of privacy policy and terms and conditions can
+also be used as indicators. While more often than not, these are legalese
+boilerplate texts, the rogue lending apps, don’t host them on their domains
+and use Google docs / other static web hosting to host these pages.
+○ Non-domain hosted privacy policies e.g. gDocs, are more suspect.
+Public presence - Website of the apps, their professionalism (Sites have
+unlinked / missing pages) is also a good proxy indicator if a loan app is run by
+a trustable entity / rogue lender.
+○ Many sites have standard templates, and sometimes don’t change the
+default settings, e.g. default privacy policy.
+
+1
+
+RBI cancels Certificate of Registration of PC Financial Services | Economy News | Zee News CashBean’s parent entity was barred from digital lending after consumer conduct / money laundering
+incidents.
+2
+
+https://play.google.com/store/apps/details?id=com.kashkash.fastmoney.lending.easypay.branch.insta
+nt.creditcard.quickonline.loanapp.nigeria
+
+3. Physical Presence
+● Address - The address information in the app metadata can be used to
+identify if the entity has a physical presence in the country, supports
+communication with users in local language, complies with regulations, has a
+legally responsible point of contact for grievance handling. While some
+jurisdictions do allow partnership structures without need for physical
+presence, increasingly physical presence is being mandated for overseas
+apps.
+4. Cyber Hygiene
+● Cyber Hygiene broadly refers to the tech practices by the provider and this
+could indicate if consumers are protected in the digital world. Frequency of
+app updates can be a useful proxy indicator for product increments / iterative
+market feedback and a stale app (any more older than 90 days) is a red flag.
+This could indicate an outsourced or lack of active technical team, increasing
+susceptibility to platform breakdowns or cyber threats.
+● Infrastructure upgrades & responsiveness to cyber incidents are also
+useful indicators of having made right investments into technology operations
+and that assures consumers of dealing with an entity that is respectful /
+concerned about user-data. These could be assessed using threat-intel
+repositories like VirusTotal.com etc
+5. 3rd Parties
+● 3rd parties - A digital lender might outsource one / more / all functions to a
+range of 3rd parties that include tech intermediaries like KYC providers, data
+providers, payment processors and operational intermediaries like sales /
+recovery operations.
+○ With additional time and manual investigation, areas to explore
+include:
+■ Which 3rd parties are the go-to for predatory apps?
+■ What is the cyber hygiene of 3rd parties?
+○ Add list of 3rd party providers for India. The following is a list of 3rd
+parties identified in loan apps in India that were in use in 2021.
+Steps
+
+Service
+
+Providers
+
+Customer
+acquisition
+
+Targeted ads via different channels
+
+Google, Facebook, Youtube, Rummy sites,
+Ad SDKs
+
+KYC and Fraud Checks for ID verification and facial
+check
+recognition
+
+IDfy (India), Hyperverge (US),
+Advance.ai (China), DeepFinch
+(China), Veri5Digital (India), Link Face
+(China)
+
+Risk scoring
+
+Capture mobile and personal data to
+score borrowers
+
+Credit Vidya (Indian), Tongdun (China),
+Flashcloud (China), Epoch (China), Risk
+Cloud (China) Juicy Score (Russia),
+Fintopia (China), Zhenrongbao CN
+
+Plug into banking APIs to disburse
+Loan disbursal money into borrowers' account
+
+Finflux (Indian)
+
+Loan
+management
+
+Help manage the loan lifecycle
+
+Finflux (Indian), Perfios (Indian)
+
+Loan servicing
+
+Integrate with SMS providers to remind
+about due dates
+Kaleyra (US), Twilio (American),
+
+Integrate with payment gateways to
+Loan collection collect money from borrowers
+
+Razorpay (Indian), Cashfree (Indian)
+
+Digital Loan
+collection
+
+Flashcloud (China),
+
+Collection bots that make automated
+calls to overdue borrowers
+
+○
+
+●
+
+Analysis of data practices and cyber hygiene of 3rd parties is a useful
+indicator of the potential to cause unintended consumer harm.
+Whitelabel providers - Analysis of apps can also indicate use of whitelabel
+providers and tracking history of whitelabel providers can also indicate
+structural harms that have happened in the past and how it was handled.
+
+6. App Features (mostly manual, with some automation)
+● App permissions give a broad overview of the capabilities the lender is
+interested in and mapping of these across ecosystems can indicate if a lender
+is too pesky on data / wants more control on the borrower.
+○ A strict
+○ In Nigeria, apps used 16 permissions on average, but some lenders
+had up to 40 permissions. A script could be written to extract and
+summarise key statistics.
+○ Summary if possible
+● Clear UX - Consent on data use is non-negotiable for a responsible lender.
+Additionally, clear terms of repayment should be disclosed upfront.
+● Document trail - Email / SMS - multi-channel documentation delivery.
+● Background activity - Apps with high background activity may be constantly
+pushing data from the phone to the app’s servers. This should require explicit
+consumer consent that is comprehensible, inclusive of data harms of such
+collected data.
+7. Responsiveness
+○ CRM - Whether apps are actively responding to customer reviews or
+complaints can be codified on lender responsiveness. This could be
+automated via review of Google Play data.
+○ Social media - Similarly, one could analyse checking an app’s
+responsiveness via social media channels. While this currently requires
+manual review, this could be automated via social media / sentiment analysis.
+
+Deep dive of select indicators
+1. Permission Analysis
+1. While most apps use a common set of permissions for various reasons ranging from
+KYC to credit assessment to liveness detection, there have been apps that use
+excessive permissions either for data grab / constant post-loan surveillance / control
+of the device.
+2. Derive insights on least used permissions, most used permissions and map it against
+stated / unstated use of such permissions to analyse the possibility of harm.
+
+Example :-
+
+1. Of the 100+ apps in Nigeria identified as lending app in Nigeria, following is a list of
+popular permissions used by the app.
+read the contents of your USB storage
+
+116
+
+modify or delete the contents of your USB storage
+
+116
+
+read phone status and identity
+
+116
+
+view network connections
+
+116
+
+full network access
+
+116
+
+prevent device from sleeping
+
+103
+
+view Wi-Fi connections
+
+96
+
+take pictures and videos
+
+95
+
+precise location (GPS and network-based)
+
+86
+
+read your contacts
+
+85
+
+approximate location (network-based)
+
+84
+
+find accounts on the device
+
+80
+
+control vibration
+
+60
+
+connect and disconnect from Wi-Fi
+
+57
+
+read your text messages (SMS or MMS)
+
+53
+
+run at startup
+
+47
+
+read calendar events plus confidential information
+
+34
+
+add or modify calendar events and send email to guests without owners' knowledge
+
+24
+
+pair with Bluetooth devices
+
+23
+
+modify your contacts
+
+21
+
+modify system settings
+
+21
+
+record audio
+
+17
+
+change network connectivity
+
+17
+
+read your own contact card
+
+16
+
+receive text messages (SMS)
+
+15
+
+draw over other apps
+
+15
+
+directly call phone numbers
+
+15
+
+control flashlight
+
+15
+
+access extra location provider commands
+
+15
+
+retrieve running apps
+
+12
+
+read Google service configuration
+
+12
+
+access USB storage filesystem
+
+12
+
+access Bluetooth settings
+
+11
+
+read battery statistics
+
+8
+
+read your Web bookmarks and history
+
+7
+
+reorder running apps
+
+6
+
+read sensitive log data
+
+6
+
+read call log
+
+5
+
+control Near Field Communication
+
+5
+
+change your audio settings
+
+5
+
+set an alarm
+
+4
+
+send sticky broadcast
+
+4
+
+create accounts and set passwords
+
+4
+
+allow Wi-Fi Multicast reception
+
+4
+
+use accounts on the device
+
+3
+
+read sync settings
+
+3
+
+measure app storage space
+
+2
+
+change system display settings
+
+2
+
+add or remove accounts
+
+2
+
+Google Play license check
+
+2
+
+toggle sync on and off
+
+1
+
+read terms you added to the dictionary
+
+1
+
+make/receive SIP calls
+
+1
+
+disable your screen lock
+
+1
+
+close other apps
+
+1
+
+add words to user-defined dictionary
+
+1
+
+●
+
+●
+
+read your Web bookmarks and history for instance is an excessive permission, but is being
+used by at least 7 apps. But this was cited in an IMF paper as a novel way in using new types
+of information for credit assessment.
+add or modify calendar events and send email to guests without owners' knowledge Apps doing *anything* without the knowledge of the owner of the device, especially modifying
+calendar events is cause for concern. Specific usage of this permission needs to be studied in
+the local context.
+
+2. 3rd Party Provider analysis.
+
+1. A digital lending app integrates multiple 3rd parties which a lender might prefer to
+outsource the operations. It is also possible, for whitelabel provider - who manages a
+service offering such as “Lending App as a service” to any investor wanting to be
+present in the market.
+2. The behaviour and customer experience of a lending app is also a function of customer
+experience of these individual outsourced components that is part of the offering.
+3. The analysis of third party providers can give useful indicators on size of market outside of
+Google Play, number of apps and operators who have numerous apps based on the same
+template of 3rd party providers.
+4. Analysing data flows can also determine the data-power differentials in the ecosystem and if
+3rd parties can become powerful rent-seeking intermediaries and in some cases, actually be
+in the digital lending industry by publicly posing as 3rd parties to avoid liabilities.
+a. Advance.AI is a global facial recognition based KYC provider operating in multiple
+markets and has been building a private facial recognition based credit score product.
+Given the governance void around facial recognition and data protection in many of
+the markets they operate, a powerful data intermediary poses risk not just to
+consumers, but also to competition.
+b. Geo-politically, a large number of 3rd parties in the space operate out taxation-lite /
+neutral locations such as Singapore / Hongkong, but have strong ties / base in China.
+Use of 3rd parties will increasingly be subject to geo-political scrutiny in a
+data-localisation based regime preferred by certain governments as geo-political
+strategy.
+5. The re-use of standard tech-stack across multiple geographies also pose the risk of dumping
+as tech that is outlawed / out-regulated in certain geographies will be dumped in markets
+without similar protection. Prevalence of such dumpware poses clear threats to consumers as
+they use tech that has clear issues that have been witnessed elsewhere is still put in use.
+a. Example - Tongdun is a Chinese fintech company that operated in China, moved to
+Indonesia when faced with challenges in Chinese regulation and have since moved to
+India, again when faced with regulatory challenges in predatory practices. The re-use
+of the tech infra is clearly spottable from Indian loan apps that communicate to
+https://idfp.tongdun.net/ - a risk scoring instance setup for Indonesia originally.
+
+3. App Metadata Analysis.
+The app metadata obtained from playstore could be subject to analysis to derive various
+insights. Some examples are included below of useful inferences where data could show
+light and lead investigators to spot potentially harmful apps.
+1. A view of privacy policy URLs and developer Website URLs can be useful indicators.
+Privacy policy pages hosted on Google docs / sites / other static web hosting
+services imply the digital lender doesn’t have a website of their own, is most likely an
+informal player, by extension could be outside formal regulatory supervision / industry
+self regulation. The privacy policy URLs could also reveal if the lender is using a
+white label, their origin. https://apph5.ncreditapp.com/yinsizhengce.html indicates a
+Chinese whitelabel provider behind the app.
+
+2. Age of the app, number of versions can indicate if the app gets sufficient updates
+necessary to keep it in sync with customer / market needs, technically safe and
+sound. Any app that has not received an update in the last 3 months indicates the
+entity behind is vulnerable to cyber risks.
+
+3rd Party Digital infrastructures for lending
+There are third parties who provide provider-level infrastructure, and ecosystem-level
+infrastructure. Besides market led software stack for various components of digital lending
+like KYC, alternate data, payments, increasingly a number of bank-led / ecosystem-led
+digital infrastructures are being built to enable digital credit, actively furthered by regulators /
+government. These technology infrastructures are designed to further machine-first,
+data-driven lending for various use cases, often originally aimed at addressing data-access /
+level playing field in the market for non-banks in the lending landscape.
+While new technological infrastructure holds high potential for expanding financial access
+and improving lending decisions, they also pose potential harms which must be considered
+and addressed at their outset. Besides the generic harms arising out of algorithmic lending /
+fairness in AI/ML systems and data-driven credit decisioning, use of these infrastructures
+also enable adding a whole range of data-intermediaries into the lending value chain and
+brings its own risk.
+
+3
+
+S.No
+
+Infrastru
+cture
+
+Function
+
+Opportunity
+
+Risk / Consumer
+harm
+
+1.
+
+Account
+Aggregat
+or3 (AA)
+
+Consented financial
+data sharing
+
+Access to trustable,
+systemic financial
+data.
+
+Heightened access to
+systemic banking
+information, leading to
+higher demand for
+
+https://datagovernance.org/files/research/1641969121.pdf Tech Tools to Facilitate and Manage
+Consent: Panacea or Predicament? A Feminist Perspective - Jain Tripti - Data Governance Network.
+
+data /
+over-consenting for
+credit access.
+2.
+
+Open
+Orchestrated lending
+Credit
+via Loan Service
+Enableme Providers
+nt
+Network
+(OCEN)4
+
+Furthers embedded
+lending.
+
+Newer forms of data
+being tapped for
+credit access and a
+large number of
+intermediaries.
+
+3
+
+* Public
+Credit
+Registry 5
+
+Attempts to solve for
+fixing thin-file credit
+history regulatorily, at
+population scale.
+
+Lack of clear
+individual insolvency
+regime / clean-start
+norms leading to
+exclusion.
+
+Credit Registry of all
+debt
+
+LoanApps Database Generator
+The process of building the database of loan apps, getting a dump of metadata could be
+automated using Google Play API and data analysis on the metadata could be used to
+generate insights such as those mentioned above.
+In addition, the list of apps could also be subjected to semi-automated malware analysis and
+additional metadata related to 3rd parties could be generated and subjected to analysis,
+deriving insights.
+
+4
+
+https://github.com/iSPIRT/OCEN Loan Service Provider (LSP) <-> Lender protocol specification
+RBI: RBI likely to launch public credit registry next year, create a hub of borrowers' info, BFSI News,
+ET BFSI - Public Credit Registry by the Indian banking regulator is expected to roll out in 2023-24
+5
+
+

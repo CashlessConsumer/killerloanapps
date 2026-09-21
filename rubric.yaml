@@ -1,0 +1,67 @@
+# KillerLoanApps Scam Score rubric v0.1
+# Derived from: DeepStrat, "Indicators for Detection of Abusive Digital Lenders" (Nov 2022)
+# (archived copy: docs/deepstrat-indicators-for-detection-of-abusive-digital-lenders.pdf)
+# Principle: risk signals, not verdicts. Every subscore maps to named evidence fields.
+version: "0.1"
+updated: "2026-09-21"
+bands:
+  low: [0, 25]
+  elevated: [25, 50]
+  high: [50, 75]
+  severe: [75, 100]
+families:
+  I1_brand_aso:
+    name: "Brand & ASO abuse"
+    weight: 15
+    status: active
+    signals:
+      - "keyword-stuffed package name (>=3 generic money words: loan/cash/credit/money/paisa/dhan/quick/instant/easy/fast/lend/borrow)"
+      - "package name depth >= 6 segments (CashBean pattern)"
+      - "trademark lookalike naming (manual review, not scored in v0.1)"
+  I2_metadata_opacity:
+    name: "Metadata opacity"
+    weight: 25
+    status: active
+    signals:
+      - "privacy policy missing or hosted on docs.google.com / sites.google.com / free hosts (DeepStrat: non-domain hosted policies are suspect)"
+      - "developer website missing"
+      - "developer email missing or free-mail"
+      - "released date present but never updated since"
+  I3_physical_presence:
+    name: "Physical presence & paperwork"
+    weight: 15
+    status: partial   # only scored where legal-entity fields were harvested (LK 2026+)
+    signals:
+      - "legal entity name missing"
+      - "legal address missing or not matching jurisdiction"
+      - "legal contact phone missing"
+  I4_cyber_hygiene:
+    name: "Cyber hygiene"
+    weight: 10
+    status: active
+    signals:
+      - "stale app: no update in 90+ days (DeepStrat red flag); 365+ days double weight"
+      - "version string missing"
+  I5_supply_chain:
+    name: "3rd-party supply chain"
+    weight: 15
+    status: pending   # requires MobSF/APK lane; datasafety proxy used where available
+    signals:
+      - "communication to known risk-scoring/KYC endpoints (Tongdun, Epoch, Flashcloud...)"
+      - "datasafety declares third-party sharing + device-ID collection (proxy)"
+  I6_permissions:
+    name: "Permission excess"
+    weight: 15
+    status: active
+    signals:
+      - "dangerous permission reach: contacts, SMS, call log, precise location, mic, camera, storage, phone state, calendar-write"
+      - "harvester combo: reads contacts AND SMS"
+  I7_responsiveness:
+    name: "Responsiveness"
+    weight: 5
+    status: pending   # requires Play reviews endpoint lane
+    signals:
+      - "no developer replies to reviews"
+      - "review keywords indicating harassment"
+pending_rule: "NULL families are excluded; composite renormalised over scored families and flagged 'partial'."
+disclaimer: "Scores are risk signals computed from public Play listings — not a verdict on any entity. Absence of score does not mean safety. Corrections: open an issue."

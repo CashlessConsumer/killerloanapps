@@ -1,0 +1,20 @@
+{
+ "IN": {
+  "apps": 725,
+  "permissions": 10772,
+  "deleted": 339,
+  "corpus": "India corpus Dec 2020 - Feb 2022 (published dbhub copy, byte-exact)"
+ },
+ "NG": {
+  "apps": 126,
+  "permissions": 2100,
+  "deleted": 0,
+  "corpus": "Nigeria corpus Mar 2022 (DStudio x CC shared drive)"
+ },
+ "LK": {
+  "apps": 155,
+  "permissions": 1768,
+  "deleted": 0,
+  "corpus": "Sri Lanka harvest 2026-09-20 via GPlayAPI v2 (killerloanapps playbook run)"
+ }
+}
