@@ -1,0 +1,48 @@
+# Scope rules — which captured apps belong in lending-scope headlines.
+# The harvest is keyword-driven (Play search), so it also catches general-purpose
+# UPI/wallet/shopping apps and lenders that operate outside the jurisdiction.
+# These stay in the warehouse (nothing hidden) but are labelled out_of_scope.
+version: 1
+lending_keywords: [loan, lend, credit, cash, borrow, udhaar, paisa, emi, finance,
+                   microfinance, payday, kredit, instant cash, salary advance]
+# Curated by hand, 2026-09-21 — add app ids here when a capture is clearly not a
+# lending product for this jurisdiction's consumers.
+out_of_scope_app_ids:
+  # India — general-purpose payments / wallets
+  - com.google.android.apps.nbu.paisa.user
+  - com.google.android.apps.nbu.paisa.merchant
+  - com.phonepe.app
+  - com.phonepe.app.business
+  - net.one97.paytm
+  - com.paytm.business
+  - money.super.payments
+  # India — banks' general apps and shopping
+  - com.csam.icici.bank.imobile
+  - com.idfcfirstbank.optimus
+  - in.amazon.mShop.android.shopping
+  - com.ril.ajio
+  - com.fsn.nykaa
+  - com.manash.purplle
+  - com.bewakoof.bewakoof
+  # India — ledgers, savings, credit-score (adjacent, not a lender)
+  - com.vaibhavkalpe.android.khatabook
+  - in.okcredit.merchant
+  - com.bharatpe.app
+  - com.jar.app
+  - com.rupicard.score
+  # Sri Lanka — non-lending or lenders operating elsewhere
+  - com.wooricard.smartapp
+  - com.pickme.passenger
+  - com.freeman.moneymanager
+  - com.cashbooknew
+  - com.redotpay
+  - pagibigfund.virtualpagibigapp
+  - com.myklarnamobile
+  - com.paymaya
+  - com.cashea.app
+  - app.tabby.client
+  - com.moneyfellows.mobileapp
+  - com.chippercash
+  - com.fhl.salmon
+  - com.tonik.mobile
+  - io.breezeventures.mb

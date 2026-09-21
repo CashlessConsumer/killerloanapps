@@ -1,28 +1,59 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><title>Methodology</title>
 <link rel="stylesheet" href="style.css"></head><body><main>
-<p class="mut"><a href="index.html">killerloanapps</a> · jurisdictions: <a href="jurisdiction/lk.html">LK</a> · <a href="jurisdiction/in.html">IN</a> · <a href="jurisdiction/ng.html">NG</a> · <a href="deletions.html">deleted</a> · <a href="methodology.html">methodology</a></p>
+<p class="mut"><a href="index.html">killerloanapps</a> · live: <a href='jurisdiction/in.html'>India</a> · <a href='jurisdiction/lk.html'>Sri Lanka</a> · historical: <a href='historical/in-2020-2022.html'>India</a> · <a href='historical/ng-2022.html'>Nigeria</a> · <a href="deletions.html">deleted</a> · <a href="methodology.html">methodology</a></p>
 
-<h1>Methodology — rubric 0.2</h1>
-<p>Framework: <i>Indicators for Detection of Abusive Digital Lenders</i> (DeepStrat, Nov 2022) — the 7-indicator-family
-toolkit CashlessConsumer co-developed, operationalised here as a transparent weighted score over public app-store data.
-Weights and thresholds are versioned in <code>rubric.yaml</code> in the repo; every score is reproducible from the warehouse.</p>
-<h2>Families</h2>
-<table><tr><th>Family</th><th>Weight</th><th>What it measures</th><th>Status</th></tr><tr><td><b>I1_brand_aso</b> Brand &amp; ASO abuse</td><td>15</td><td></td><td>pending</td></tr><tr><td><b>I2_metadata_opacity</b> Metadata opacity</td><td>25</td><td></td><td>pending</td></tr><tr><td><b>I3_physical_presence</b> Physical presence &amp; paperwork</td><td>15</td><td></td><td>pending</td></tr><tr><td><b>I4_cyber_hygiene</b> Cyber hygiene</td><td>10</td><td></td><td>pending</td></tr><tr><td><b>I5_supply_chain</b> 3rd-party supply chain</td><td>15</td><td></td><td>pending</td></tr><tr><td><b>I6_permissions</b> Permission excess</td><td>15</td><td></td><td>pending</td></tr><tr><td><b>I7_responsiveness</b> Responsiveness</td><td>5</td><td></td><td>pending</td></tr></table>
-<h2>Bands</h2><p><b>low</b> 0–25 · <b>elevated</b> 25–50 · <b>high</b> 50–75 · <b>severe</b> 75–100 (composite 0–100; partial scores renormalise over computed families and are marked "partial").</p>
+<h1>Methodology</h1>
+<p>Play-Store-only, paperwork-first. Everything on this site comes from public Play listings captured with our own
+harvest tooling; nothing is inferred about a company's conduct beyond what its own listing, permissions and paperwork say.</p>
+
+<h2>Pipeline</h2>
+<ol>
+<li><b>Harvest</b> — keyword search on the Play Store for lending terms per country (in/lk/ng plus local-language terms),
+then fetch full detail + permissions for every candidate (<code>scripts/harvest.py</code>, via our GPlayAPI v2 instance
+at gplayapiv2.fly.dev). Writes <code>data/harvests/&lt;CC&gt;_&lt;date&gt;.db</code>.</li>
+<li><b>Warehouse</b> — corpora merged into one DuckDB (<code>scripts/build_warehouse.py</code>), each row carrying its corpus id,
+harvest date, legal-entity fields, privacy policy URL and the full permission set.</li>
+<li><b>Availability recheck</b> — every app id of every live corpus is re-queried against its own storefront on each refresh
+(<code>scripts/check_deletions.py</code>), so deletions are recorded as events, not lost.</li>
+<li><b>Scoring</b> — rubric (<code>rubric.yaml</code> 0.2) applied per app (<code>scripts/score.py</code>),
+including a +15 <i>platform_removed</i> adjustment for apps that have since vanished from the store.</li>
+<li><b>Publication</b> — static pages (<code>scripts/build_site.py</code>) committed and served from GitHub Pages.</li>
+</ol>
+
+<h2>Corpora</h2>
+<p>A corpus is a dated harvest of one country's storefront. Live corpora are re-harvested and rechecked on a schedule;
+historical corpora are frozen research snapshots kept as of their harvest date — useful precisely because they show what
+the 2021-22 abusive-lending wave looked like, and how much of it later disappeared.</p>
+<table><tr><th>Live corpus</th><th>Country</th><th>Harvested</th><th>Apps</th></tr><tr><td>India</td><td><code>in</code></td><td>2026-09-21</td><td>229</td></tr><tr><td>Sri Lanka</td><td><code>lk</code></td><td>2026-09-20</td><td>155</td></tr></table>
+<table><tr><th>Historical corpus</th><th>Country</th><th>Snapshot</th><th>Apps</th><th>Note</th></tr><tr><td>India</td><td><code>in</code></td><td>2022-02-27</td><td>725</td><td>India corpus Dec 2020 - Feb 2022 (dbhub copy, byte-exact)</td></tr><tr><td>Nigeria</td><td><code>ng</code></td><td>2022-03-04</td><td>144</td><td>Nigeria corpus Mar 2022 (DStudio x CC shared drive)</td></tr></table>
+
+<h2>Indicator families</h2>
+<p>Seven families, derived from DeepStrat's <i>Indicators for Detection of Abusive Digital Lenders</i> (Nov 2022,
+copy in <code>docs/</code>) — the framework the operator of this site co-wrote. Each family scores 0-100; the composite is a
+weighted average, and families with no signal in a corpus's era are reported as partial rather than imputed.</p>
+<table><tr><th>Family</th><th>Name</th><th>Weight</th></tr><tr><td>I1</td><td>Brand &amp; ASO abuse</td><td>15</td></tr><tr><td>I2</td><td>Metadata opacity</td><td>25</td></tr><tr><td>I3</td><td>Physical presence &amp; paperwork</td><td>15</td></tr><tr><td>I4</td><td>Cyber hygiene</td><td>10</td></tr><tr><td>I5</td><td>3rd-party supply chain</td><td>15</td></tr><tr><td>I6</td><td>Permission excess</td><td>15</td></tr><tr><td>I7</td><td>Responsiveness</td><td>5</td></tr></table>
+
+<h2>Lending scope</h2>
+<p>The harvest is keyword-driven, so it also catches general-purpose payments, shopping, ledger and foreign apps.
+Those stay in the dataset (nothing is hidden) but are labelled <code>out_of_scope</code> or <code>adjacent</code> and kept out of
+headline counts. 34 app ids are currently listed as clearly non-lending in <code>data/scope_rules.yaml</code>;
+everything else is classified by lending keywords in title + summary.</p>
+
+<h2>Deletion evidence</h2>
+<p>Two classes, never blended: <b>corpus record</b> (a gap logged while the historical corpus was being built —
+the 2021-22 India record of 339 apps) and <b>availability recheck</b> (a live check against the storefront, stamped with
+the date). An app that disappears and later reappears is removed from the deletion log automatically.</p>
+
 <h2>What this is not</h2>
 <ul>
-<li>Not a legal determination — indicators are circumstantial signals, some (like ASO keyword stuffing) are only weakly associated with abuse.</li>
-<li>Not a substitute for APK analysis — I5 (supply chain: shared SDKs with surveillance/fraud vendors) needs on-device binary inspection; the APK lane is phase 3.</li>
-<li>Not abuse-proof — ratings/reviews are gameable, which is exactly why metadata and paperwork carry more weight.</li>
+<li>Not a verdict on any company. A high score means the public listing shows <i>indicators</i> associated with abusive lending;
+a low score is not a safety certificate.</li>
+<li>Not a substitute for regulatory records. Where a licence claim matters, check the regulator (CBSL/MCRA in Sri Lanka,
+RBI and the state police in India, FCCPC in Nigeria) — we say what the listing claims, not what the law says.</li>
+<li>Not real-time. The snapshot date on every page is the date of the last harvest or recheck; apps change silently.</li>
+<li>No personal data. Developer/legal contacts here are the business contacts the developer published on the store.</li>
 </ul>
-<h2>Data provenance</h2>
-<ul>
-<li>LK: own harvest, 2026-09-20, GPlayAPI v2 (<code>country=lk</code>), 176 candidates → 155 apps after keyword filter.</li>
-<li>IN: the published killerloanapps corpus (Dec 2020 – Feb 2022), 725 apps incl. 339 later deleted from Play.</li>
-<li>NG: Mar 2022 corpus, 126 apps.</li>
-</ul>
-<p>Corpora are historical snapshots: scores describe the app as captured on <code>harvested_on</code>, not today.</p>
 <div class="disclaimer"><b>Risk signals, not verdicts.</b> Scores flag <i>indicators</i> of abusive-lending behaviour from public app-store data. A high score is not proof of illegality; a low score is not a safety certificate. See <a href="methodology.html">methodology</a>.</div>
 <footer>CashlessConsumer · data: Play Store metadata + permissions, own harvests · scoring: rubric 0.2 (experimental) · <a href="methodology.html">what this score is not</a></footer>
 </main></body></html>

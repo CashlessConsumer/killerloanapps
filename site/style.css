@@ -10,6 +10,7 @@ th{background:var(--card);color:var(--mut);font-weight:600}
 .b-low{background:#12331f;color:var(--ok)}.b-elevated{background:#3a2c10;color:var(--warn)}
 .b-high{background:#3a1414;color:#ff8484}.b-severe{background:#5c0f0f;color:#ffb3b3}
 .b-none{background:#222;color:var(--mut)}
+.k-live{background:#10281c;color:#7ee0a4}.k-hist{background:#241f2e;color:#c3aee8}
 .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px}
 .disclaimer{border:1px solid var(--warn);border-radius:8px;padding:10px 14px;background:#241c0c;margin:16px 0}

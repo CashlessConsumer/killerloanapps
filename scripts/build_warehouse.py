@@ -14,14 +14,37 @@ DATA = os.path.join(ROOT, "data")
 os.makedirs(DATA, exist_ok=True)
 OUT = os.path.join(DATA, "killerloanapps.duckdb")
 
-SOURCES = [
-    ("IN", "/home/workspace/Datasets/loanapps-in/loanapps_dbhub_20220227.db", "2022-02-27",
-     "India corpus Dec 2020 - Feb 2022 (published dbhub copy, byte-exact)"),
-    ("NG", "/home/workspace/Datasets/loanappsdata_NG.db", "2022-03-04",
-     "Nigeria corpus Mar 2022 (DStudio x CC shared drive)"),
-    ("LK", "/home/workspace/Datasets/loanapps-lk/loanappsdata_LK.db", "2026-09-20",
-     "Sri Lanka harvest 2026-09-20 via GPlayAPI v2 (killerloanapps playbook run)"),
+# Corpus registry: id -> (country, status, harvested_on, label, sqlite source)
+# Live corpora are re-harvested by scripts/harvest.py into data/harvests/<CC>_<date>.db
+# Historical corpora are frozen era snapshots kept for the deletion/attrition record.
+CORPORA = [
+    ("IN", "in", "live", "2026-09-21",
+     "India harvest 2026-09-21 via GPlayAPI v2 (killerloanapps playbook run)",
+     "data/harvests/IN_*.db"),
+    ("LK", "lk", "live", "2026-09-20",
+     "Sri Lanka harvest 2026-09-20 via GPlayAPI v2",
+     "data/harvests/LK_*.db"),
+    ("IN_2020_2022", "in", "historical", "2022-02-27",
+     "India corpus Dec 2020 - Feb 2022 (dbhub copy, byte-exact)",
+     "/home/workspace/Datasets/loanapps-in/loanapps_dbhub_20220227.db"),
+    ("NG_2022", "ng", "historical", "2022-03-04",
+     "Nigeria corpus Mar 2022 (DStudio x CC shared drive)",
+     "/home/workspace/Datasets/loanappsdata_NG.db"),
 ]
+
+
+COUNTRY_LABEL = {"in": "India", "lk": "Sri Lanka", "ng": "Nigeria"}
+
+
+def resolve(pathspec):
+    """Newest file matching a glob pathspec (relative to ROOT or absolute)."""
+    if not any(ch in pathspec for ch in "*?["):
+        return pathspec
+    import glob
+    pat = pathspec if os.path.isabs(pathspec) else os.path.join(ROOT, pathspec)
+    hits = sorted(glob.glob(pat))
+    return hits[-1] if hits else None
+
 
 COLS = ["app_id","title","summary","installs","min_installs","max_installs","score","ratings",
         "free","currency","developer_id","developer_email","developer_website","developer_address",
@@ -66,9 +89,25 @@ con.execute("""CREATE TABLE apps (
     harvested_on DATE, corpus VARCHAR)""")
 con.execute("CREATE TABLE permissions (jurisdiction VARCHAR, app_id VARCHAR, permission VARCHAR)")
 con.execute("CREATE TABLE deleted (jurisdiction VARCHAR, app_id VARCHAR, deleted_on VARCHAR)")
+con.execute("""CREATE TABLE corpora (corpus_id VARCHAR, label VARCHAR, short VARCHAR, kind VARCHAR,
+    country VARCHAR, harvested_on DATE, seed_date DATE, description VARCHAR, source VARCHAR)""")
 
 stats = {}
-for jur, path, harvest, corpus in SOURCES:
+for jur, country, status, harvest, corpus, pathspec in CORPORA:
+    path = resolve(pathspec)
+    if not path or not os.path.exists(path):
+        print(jur, "SKIP (no source:", pathspec + ")")
+        continue
+    hv = harvest
+    if any(ch in pathspec for ch in "*?["):
+        stem = os.path.basename(path).rsplit(".", 1)[0]          # CC_YYYY-MM-DD
+        if "_" in stem:
+            cand = stem.rsplit("_", 1)[1]
+            if len(cand) == 10 and cand[4] == "-":
+                hv = cand
+    label = COUNTRY_LABEL.get(country, country.upper())
+    con.execute("INSERT INTO corpora VALUES (?,?,?,?,?,?,?,?,?)",
+                (jur, label, jur, status, country, hv, hv, corpus, path))
     apps = rows_from(path, "loanapp_playdata", [MAP[c] for c in COLS])
     n = 0
     for a in apps:
@@ -104,7 +143,8 @@ for jur, path, harvest, corpus in SOURCES:
             nd += 1
     except Exception:
         pass
-    stats[jur] = {"apps": n, "permissions": np, "deleted": nd, "corpus": corpus}
+    stats[jur] = {"apps": n, "permissions": np, "deleted": nd, "corpus": corpus,
+                  "country": country, "status": status, "harvested_on": harvest, "source": path}
     print(jur, stats[jur])
 
 # light API dump (no descriptions)

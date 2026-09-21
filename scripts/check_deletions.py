@@ -13,23 +13,22 @@ import requests, duckdb
 
 B = "https://gplayapiv2.fly.dev"
 DB = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "killerloanapps.duckdb")
-CC = {"IN": "in", "NG": "ng", "LK": "lk"}
 TODAY = datetime.date.today().isoformat()
 
 def check(args):
-    jur, app_id = args
-    url = f"{B}/api/apps/{urllib.parse.quote(app_id)}?country={CC[jur]}"
+    jur, country, app_id = args
+    url = f"{B}/api/apps/{urllib.parse.quote(app_id)}?country={country}"
     try:
         r = requests.get(url, timeout=25)
         if r.status_code == 200:
-            return jur, app_id, "live"
+            return jur, country, app_id, "live"
         j = r.json() if r.headers.get("content-type","").startswith("application/json") else {}
         msg = str(j.get("message", ""))
         if r.status_code == 404 or "not found" in msg.lower():
-            return jur, app_id, "deleted"
-        return jur, app_id, f"error:{r.status_code}"
+            return jur, country, app_id, "deleted"
+        return jur, country, app_id, f"error:{r.status_code}"
     except Exception as e:
-        return jur, app_id, f"error:{type(e).__name__}"
+        return jur, country, app_id, f"error:{type(e).__name__}"
 
 def main(limit=None, only=None):
     con = duckdb.connect(DB)
@@ -44,28 +43,38 @@ def main(limit=None, only=None):
         s = sqlite3.connect("file:/home/workspace/Datasets/loanapps-in/loanapps_dbhub_20220227.db?mode=ro", uri=True)
         known = {(j, a) for j, a in con.execute("SELECT jurisdiction, app_id FROM deleted_log")}
         for aid, d in s.execute("SELECT appId, date FROM loanapp_deletedapps"):
-            key = ("IN", aid)
+            key = ("IN_2020_2022", aid)
             if key not in known:
-                con.execute("INSERT INTO deleted_log VALUES ('IN', ?, ?, ?, 'seeded from 2021-22 corpus loanapp_deletedapps')",
+                con.execute("INSERT INTO deleted_log VALUES ('IN_2020_2022', ?, ?, ?, 'seeded from 2021-22 corpus loanapp_deletedapps')",
                             (aid, str(d)[:10] if d else None, TODAY))
                 n_seed += 1
         s.close()
     except Exception as e:
         print("seed:", e)
-    q = "SELECT jurisdiction, app_id FROM apps"
+    # country + kind per corpus
+    corpora = {r[0]: (r[1], r[2]) for r in con.execute(
+        "SELECT corpus_id, country, kind FROM corpora").fetchall()}
+    if only and only != "live":
+        ids = [c.strip() for c in only.split(",") if c.strip()]
+    elif only == "live":
+        ids = [c for c, (_, kind) in corpora.items() if kind == "live"]
+    else:  # default: every corpus, so historical attrition keeps updating
+        ids = list(corpora)
+    q = "SELECT jurisdiction, app_id FROM apps WHERE jurisdiction = ?"
     args = []
-    if only:
-        for jur in only.split(","):
-            args += [(r[0], r[1]) for r in con.execute(q + " WHERE jurisdiction=?", [jur]).fetchall()]
-    else:
-        args = con.execute(q).fetchall()
+    for cid in ids:
+        if cid not in corpora:
+            print("skip unknown corpus:", cid)
+            continue
+        country = corpora[cid][0]
+        args += [(cid, country, r[1]) for r in con.execute(q, [cid]).fetchall()]
     if limit:
         args = args[:limit]
     prev = dict(((j, a), st) for j, a, st in con.execute("SELECT jurisdiction, app_id, status FROM availability").fetchall())
     counts = {"live": 0, "deleted": 0, "error": 0}
     done = 0
     with cf.ThreadPoolExecutor(4) as ex:
-        for jur, aid, st in ex.map(check, args):
+        for jur, _cc, aid, st in ex.map(check, args):
             done += 1
             if st.startswith("error"):
                 counts["error"] += 1
@@ -86,11 +95,15 @@ def main(limit=None, only=None):
                 print(f"{done}/{len(args)} {counts}", flush=True)
     con.commit()
     print(f"DONE checked={len(args)} seeded={n_seed} {counts}")
-    for j in CC:
+    for j in corpora:
         n = con.execute("SELECT COUNT(*) FROM deleted_log WHERE jurisdiction=?", [j]).fetchone()[0]
-        print(f"deleted_log {j}: {n}")
+        av = con.execute("SELECT status, COUNT(*) FROM availability WHERE jurisdiction=? GROUP BY 1", [j]).fetchall()
+        print(f"deleted_log {j}: {n} | availability {dict(av)}")
     con.close()
 
 if __name__ == "__main__":
-    main(limit=int(sys.argv[1]) if len(sys.argv) > 1 else None,
-         only=sys.argv[2] if len(sys.argv) > 2 else None)
+    argv = [a for a in sys.argv[1:] if not a.startswith("--")]
+    only = argv[1] if len(argv) > 1 else None
+    if only is None and "--all" in sys.argv:
+        only = ",".join(["IN", "LK", "IN_2020_2022", "NG_2022"])
+    main(limit=int(argv[0]) if argv else None, only=only)

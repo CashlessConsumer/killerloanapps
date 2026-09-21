@@ -25,8 +25,20 @@ DANGEROUS = [
     ("retrieve running apps", "procmon"), ("read phone status", "phonestate"),
     ("modify your calendars", "calendarw"),
 ]
-HARVEST = {"IN": "2022-02-27", "NG": "2022-03-04", "LK": "2026-09-20"}
-LOCAL_HINT = {"LK": ["sri lanka", "colombo"]}
+# Harvest dates come from the warehouse `corpora` table (assembled at run time).
+SCOPE_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "scope_rules.yaml")
+SCOPE = yaml.safe_load(open(SCOPE_PATH))
+SCOPE_KW = tuple(SCOPE["lending_keywords"])
+SCOPE_OUT = set(SCOPE["out_of_scope_app_ids"])
+
+def scope_of(app):
+    if app["app_id"] in SCOPE_OUT:
+        return "out_of_scope"
+    blob = ((app.get("title") or "") + " " + (app.get("summary") or "")).lower()
+    return "lending" if any(k in blob for k in SCOPE_KW) else "adjacent"
+
+LOCAL_HINT = {"LK": ["sri lanka", "colombo"], "IN": ["india"],
+              "IN_2020_2022": ["india"], "NG_2022": ["nigeria", "lagos"]}
 
 def ts(v):
     if v is None: return None
@@ -73,7 +85,7 @@ def i2(app):
 
 def i3(app):
     jur = app["jurisdiction"]
-    if jur != "LK":
+    if not any((app.get(k) or "").strip() for k in ("legal_name","legal_email","legal_address","legal_phone")):
         return None, ["era_no_legal_fields"]
     s = 0; flags = []
     if not (app["legal_name"] or "").strip():
@@ -81,7 +93,7 @@ def i3(app):
     addr = (app["legal_address"] or "").strip()
     if not addr:
         s += 25; flags.append("no_legal_address")
-    elif not any(h in addr.lower() for h in LOCAL_HINT.get(jur, [])):
+    elif LOCAL_HINT.get(jur) and not any(h in addr.lower() for h in LOCAL_HINT[jur]):
         s += 15; flags.append("addr_jurisdiction_mismatch")
     if not (app["legal_phone"] or "").strip():
         s += 15; flags.append("no_legal_phone")
@@ -144,7 +156,10 @@ def score_all(con):
         jurisdiction VARCHAR, app_id VARCHAR,
         i1 SMALLINT, i2 SMALLINT, i3 SMALLINT, i4 SMALLINT, i5 SMALLINT, i6 SMALLINT, i7 SMALLINT,
         composite SMALLINT, band VARCHAR, partial BOOLEAN, flags VARCHAR[],
-        rubric_version VARCHAR, scored_on DATE)""")
+        rubric_version VARCHAR, scored_on DATE, scope VARCHAR)""")
+    global HARVEST
+    HARVEST = {c: str(h) for c, h in con.execute(
+        "SELECT corpus_id, harvested_on FROM corpora").fetchall()}
     rows = con.execute("SELECT * FROM apps").fetchdf().to_dict("records")
     pmap = {}
     for jur, aid, p in con.execute("SELECT jurisdiction, app_id, permission FROM permissions").fetchall():
@@ -191,23 +206,17 @@ def score_all(con):
                 if lo <= comp < hi or (b == "severe" and comp >= 75):
                     band = b; break
         con.execute(
-            "INSERT INTO scores VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            "INSERT INTO scores VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
             (app["jurisdiction"], app["app_id"],
              sub["I1"][0], sub["I2"][0], sub["I3"][0], sub["I4"][0], sub["I5"][0], sub["I6"][0], sub["I7"][0],
              comp, band, partial, sorted(set(allflags)), RUBRIC["version"],
-             datetime.date.today().isoformat()))
+             datetime.date.today().isoformat(), scope_of(app)))
         n += 1
     return n
 
 if __name__ == "__main__":
     con = duckdb.connect(DB)
-    con.execute("""CREATE TABLE IF NOT EXISTS scores (
-        jurisdiction VARCHAR, app_id VARCHAR,
-        i1_brand_aso INT, i2_metadata INT, i3_presence INT, i4_hygiene INT,
-        i5_supplychain INT, i6_permissions INT, i7_responsive INT,
-        composite INT, band VARCHAR, partial BOOLEAN, flags VARCHAR[],
-        rubric_version VARCHAR, scored_on DATE)""")
-    con.execute("DELETE FROM scores")
+    con.execute("DROP TABLE IF EXISTS scores")
     n = score_all(con)
     bands = con.execute("SELECT band, COUNT(*) FROM scores GROUP BY band ORDER BY 2 DESC").fetchall()
     print("scored", n, "rows |", bands)
