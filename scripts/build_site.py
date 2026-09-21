@@ -17,13 +17,36 @@ apps = con.execute("""
     SELECT a.*, s.i1_brand_aso, s.i2_metadata, s.i3_presence, s.i4_hygiene,
            s.i5_supplychain, s.i6_permissions, s.i7_responsive,
            s.composite, s.band, s.partial, s.flags, s.rubric_version, s.scored_on
-    FROM apps a JOIN scores s USING (jurisdiction, app_id)""").fetchdf()
+    FROM apps a JOIN scores s USING (jurisdiction, app_id)
+    QUALIFY row_number() OVER (PARTITION BY a.jurisdiction, a.app_id ORDER BY a.title) = 1""").fetchdf()
 perms = {}
 for jur, aid, p in con.execute("SELECT jurisdiction, app_id, permission FROM permissions").fetchall():
     perms.setdefault((jur, aid), []).append(p)
 deleted = {}
+DELSRC = {}
 for jur, aid, d in con.execute("SELECT jurisdiction, app_id, deleted_on FROM deleted").fetchall():
     deleted.setdefault(jur, []).append((aid, d))
+    DELSRC[(jur, aid)] = "2021 corpus record"
+try:
+    for jur, aid, fm, note in con.execute(
+            "SELECT jurisdiction, app_id, first_missing, note FROM deleted_log").fetchall():
+        if aid in {a for a, _ in deleted.get(jur, [])}:
+            DELSRC[(jur, aid)] = "2021 corpus record + absent at recheck"
+        else:
+            deleted.setdefault(jur, []).append((aid, str(fm) if fm else None))
+            DELSRC[(jur, aid)] = "availability recheck"
+except Exception as e:
+    print("deleted_log read failed:", e)
+
+GONE = {}
+LIVE = {}
+for jur, st, n in con.execute(
+        "SELECT jurisdiction, status, COUNT(*) FROM availability GROUP BY 1,2").fetchall():
+    (GONE if st == "deleted" else LIVE)[jur] = n
+TRACKED = int(apps.shape[0])
+HIST_EXTRA = con.execute(
+    "SELECT COUNT(*) FROM deleted d LEFT JOIN apps a USING (jurisdiction, app_id) "
+    "WHERE a.app_id IS NULL").fetchone()[0]
 
 DANGEROUS = ("contacts", "sms", "call log", "location", "microphone", "camera", "phone", "storage", "calendar")
 JURS = {"LK": ("Sri Lanka", "Live harvest 2026-09-20 via GPlayAPI v2 (country=lk). 176 candidates → 155 lending apps."),
@@ -122,7 +145,11 @@ for j, (name, desc) in JURS.items():
         mark = ' <span class="badge b-severe">DELETED from Play</span>' if r.app_id in delmap else ""
         rows.append(f"<tr><td><a href='../apps/{slug(j, r.app_id)}.html'>{esc(r.title)}</a>{mark}</td>"
                     f"<td>{esc(r.installs)}</td><td>{esc(r.legal_name)}</td><td>{score_badge(r.composite, r.band, r.partial)}</td></tr>")
-    del_line = f"<p class='mut'>{len(dels)} apps in this jurisdiction were deleted from the Play Store after capture.</p>" if dels else ""
+    n_gone = GONE.get(j, 0)
+    n_tot = len(sub)
+    del_line = (f"<p class='mut'><b>{n_gone} of {n_tot} apps in this jurisdiction are gone from the "
+                f"Play Store</b> (checked against the LK/IN/NG storefront on 2026-09-21; {LIVE.get(j, 0)} still live). "
+                f"<a href='../deletions.html'>Deletion log</a></p>") if n_gone else ""
     os.makedirs(os.path.join(SITE, "jurisdiction"), exist_ok=True)
     open(os.path.join(SITE, "jurisdiction", f"{j.lower()}.html"), "w").write(page(f"{name} loan apps", f"""
 <h1>{esc(name)} — {len(sub)} loan apps</h1><p class="mut">{esc(desc)}</p>{del_line}
@@ -198,20 +225,28 @@ for j in ("IN", "NG", "LK"):
         band = sub.iloc[0]["band"] if len(sub) else None
         part = bool(sub.iloc[0]["partial"]) if len(sub) else False
         rows.append('<tr><td>' + j + '</td><td><a href="apps/' + slug(j, aid) + '.html">' + esc(title) + '</a></td>'
-                    '<td><code>' + esc(aid) + '</code></td><td>' + esc(d) + '</td><td>' + score_badge(comp, band, part) + '</td></tr>')
+                    '<td><code>' + esc(aid) + '</code></td><td>' + esc(d) + '</td>'
+                    '<td class="mut">' + esc(DELSRC.get((j, aid), "") + ("" if len(sub) else " (not in tracked set)")) + '</td>'
+                    '<td>' + score_badge(comp, band, part) + '</td></tr>')
 cnt = {j: len(deleted.get(j, [])) for j in ("IN", "NG", "LK")}
 del_html = ('<div class="cards">'
-            "<div class='card'><div class='mut'>IN deleted</div><div style='font-size:28px;font-weight:800'>" + str(cnt["IN"]) + "</div></div>"
-            "<div class='card'><div class='mut'>NG deleted</div><div style='font-size:28px;font-weight:800'>" + str(cnt["NG"]) + "</div></div>"
-            "<div class='card'><div class='mut'>LK deleted (2026-09-21 recheck)</div><div style='font-size:28px;font-weight:800'>" + str(cnt["LK"]) + "</div></div>"
+            "<div class='card'><div class='mut'>IN gone</div><div style='font-size:28px;font-weight:800'>" + str(GONE.get("IN", 0)) + "</div></div>"
+            "<div class='card'><div class='mut'>NG gone</div><div style='font-size:28px;font-weight:800'>" + str(GONE.get("NG", 0)) + "</div></div>"
+            "<div class='card'><div class='mut'>LK gone</div><div style='font-size:28px;font-weight:800'>" + str(GONE.get("LK", 0)) + "</div></div>"
+            "<div class='card'><div class='mut'>Tracked apps gone</div><div style='font-size:28px;font-weight:800'>" + str(sum(GONE.values())) + " / " + str(TRACKED) + "</div></div>"
+            "<div class='card'><div class='mut'>Corpus-era records (outside tracked set)</div><div style='font-size:28px;font-weight:800'>" + str(HIST_EXTRA) + "</div></div>"
             "</div>")
 del_page = ('<h1>Deleted from the Play Store</h1>'
             '<p>Apps captured in a harvest and later absent from the store. Deletion is one of the strongest '
             'end-state signals: either the platform enforced against abuse, or the operator burned the listing. '
-            'Either way the snapshot is the record. IN/NG counts are from the historical corpora (records where the '
-            'app was already gone or later verified absent); LK is a live recheck on 2026-09-21.</p>'
+            'Either way the snapshot is the record. Two evidence classes are merged here: <i>2021 corpus record</i> '
+            '(gaps logged while the India dataset was built, Dec 2020 - Feb 2022) and <i>availability recheck</i> '
+            '(every app id checked against its own storefront on 2026-09-21 via GPlayAPI v2, method in '
+            '<code>scripts/check_deletions.py</code>). A storefront 404 is recorded absent; transient errors are '
+            'logged and never overwrite a known state.</p>'
             + del_html +
-            '<table><tr><th>Jur</th><th>App</th><th>appId</th><th>Deleted on</th><th>Score at capture</th></tr>'
+            '<table><tr><th>Jur</th><th>App</th><th>appId</th><th>Deleted on / first missing</th>'
+            '<th>Evidence</th><th>Score at capture</th></tr>'
             + "".join(rows) + '</table>' + DISC)
 open(os.path.join(SITE, "deletions.html"), "w").write(page("Deleted apps", del_page))
 
