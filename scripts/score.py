@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Apply rubric.yaml (DeepStrat indicator framework) to the warehouse -> scores table + scores.json.
 
-v0.1: I5/I7 pending (need APK lane / reviews lane). I3 partial (LK only). NULL families are
+v0.2: I5/I7 pending (need APK lane / reviews lane). I3 partial (LK only). NULL families are
 excluded and the composite renormalised over scored families, flagged 'partial'.
 """
 import json, os, re, datetime, duckdb, yaml
@@ -149,6 +149,7 @@ def score_all(con):
     pmap = {}
     for jur, aid, p in con.execute("SELECT jurisdiction, app_id, permission FROM permissions").fetchall():
         pmap.setdefault((jur, aid), []).append(p)
+    av = dict(((j, a), st) for j, a, st in con.execute("SELECT jurisdiction, app_id, status FROM availability").fetchall()) if con.execute("SELECT 1 FROM information_schema.tables WHERE table_name='availability'").fetchone() else {}
     n = 0
     for app in rows:
         key = (app["jurisdiction"], app["app_id"])
@@ -172,9 +173,18 @@ def score_all(con):
             comp = sum(scored[f] * fams[f]["weight"] for f in scored) / weights
             comp = round(comp)
             partial = len(scored) < len(fams)
+            adj = RUBRIC.get("adjustments", {})
+            for adj_id, cfg in adj.items():
+                if cfg.get("status") != "active":
+                    continue
+                if adj_id == "platform_removed" and av.get(key) == "deleted":
+                    comp += cfg["points"]
+                    allflags.append("platform_removed")
         else:
             comp = None
             partial = True
+        if comp is not None:
+            comp = max(0, min(100, comp))
         band = "unscored"
         if comp is not None:
             for b, (lo, hi) in RUBRIC["bands"].items():

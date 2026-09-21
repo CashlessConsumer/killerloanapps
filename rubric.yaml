@@ -2,8 +2,9 @@
 # Derived from: DeepStrat, "Indicators for Detection of Abusive Digital Lenders" (Nov 2022)
 # (archived copy: docs/deepstrat-indicators-for-detection-of-abusive-digital-lenders.pdf)
 # Principle: risk signals, not verdicts. Every subscore maps to named evidence fields.
-version: "0.1"
+version: "0.2"
 updated: "2026-09-21"
+# v0.2: adds platform_removed adjustment (multi-jurisdiction deletion tracking)
 bands:
   low: [0, 25]
   elevated: [25, 50]
@@ -63,5 +64,12 @@ families:
     signals:
       - "no developer replies to reviews"
       - "review keywords indicating harassment"
-pending_rule: "NULL families are excluded; composite renormalised over scored families and flagged 'partial'."
+adjustments:
+  platform_removed:
+    name: "Removed from Play Store"
+    status: active
+    points: 15
+    evidence: "deleted table: app absent from Play at availability recheck (2026-09-21), historical IN deletions from dbhub corpus"
+    note: "Takedowns follow documented abuse waves (India 2020-21 Google purge; Nigeria 2022). Also an evidence-loss signal: listing vanishes, harvest snapshot is the only record."
+pending_rule: "NULL families are excluded; composite renormalised over scored families and flagged 'partial'. Adjustments added after renormalisation, clamped to 0-100."
 disclaimer: "Scores are risk signals computed from public Play listings — not a verdict on any entity. Absence of score does not mean safety. Corrections: open an issue."

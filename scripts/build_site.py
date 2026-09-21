@@ -80,7 +80,7 @@ def page(title, body, rel=""):
     return f"""<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><title>{esc(title)}</title>
 <link rel="stylesheet" href="{rel}style.css"></head><body><main>
-<p class="mut"><a href="{rel}index.html">killerloanapps</a> · jurisdictions: <a href="{rel}jurisdiction/lk.html">LK</a> · <a href="{rel}jurisdiction/in.html">IN</a> · <a href="{rel}jurisdiction/ng.html">NG</a> · <a href="{rel}methodology.html">methodology</a></p>
+<p class="mut"><a href="{rel}index.html">killerloanapps</a> · jurisdictions: <a href="{rel}jurisdiction/lk.html">LK</a> · <a href="{rel}jurisdiction/in.html">IN</a> · <a href="{rel}jurisdiction/ng.html">NG</a> · <a href="{rel}deletions.html">deleted</a> · <a href="{rel}methodology.html">methodology</a></p>
 {body}
 <footer>CashlessConsumer · data: Play Store metadata + permissions, own harvests · scoring: rubric {esc(RUBRIC['version'])} (experimental) · <a href="{rel}methodology.html">what this score is not</a></footer>
 </main></body></html>"""
@@ -130,6 +130,12 @@ for j, (name, desc) in JURS.items():
 {DISC}""", rel="../"))
 
 # ---------- app pages ----------
+HAS_AV = con.execute("SELECT 1 FROM information_schema.tables WHERE table_name='availability'").fetchone()
+av = dict(((j, a), st) for j, a, st in con.execute("SELECT jurisdiction, app_id, status FROM availability").fetchall()) if HAS_AV else {}
+delall = {}
+for j, dl in deleted.items():
+    for aid, d in dl:
+        delall[aid] = (j, d)
 for r in apps.itertuples():
     key = (r.jurisdiction, r.app_id)
     pl = perms.get(key, [])
@@ -137,6 +143,10 @@ for r in apps.itertuples():
     try: flags = json.loads(r.flags) if isinstance(r.flags, str) else list(r.flags or [])
     except Exception: flags = []
     flag_html = "".join(f"<li><code>{esc(f)}</code></li>" for f in flags) or "<li>none</li>"
+    gone = av.get(key) == "deleted" or r.app_id in delall
+    gone_html = ('<p class="disclaimer"><b>Deleted from Google Play.</b> This listing was absent at the latest '
+                 'availability recheck (or is in the historical deletion record). The snapshot above is the only '
+                 'remaining structured record.</p>') if gone else ""
     ds = ""
     if r.datasafety:
         try:
@@ -146,6 +156,7 @@ for r in apps.itertuples():
         except Exception: pass
     body = f"""
 <h1>{esc(r.title)} <small class="mut">[{esc(r.jurisdiction)}]</small></h1>
+{gone_html}
 <p>{score_badge(r.composite, r.band, r.partial)} · installs {esc(r.installs)} · rating {esc(r.score)} ({esc(r.ratings)}) · updated {esc(r.updated)}</p>
 {DISC}
 <h2>Score breakdown <small class="mut">(rubric {esc(r.rubric_version)})</small></h2>
@@ -176,6 +187,33 @@ for r in apps.itertuples():
         import hashlib
         fp = os.path.join(SITE, "apps", fn + "-" + hashlib.md5(r.app_id.encode()).hexdigest()[:6] + ".html")
     open(fp, "w").write(page(r.title, body, rel="../"))
+
+# ---------- deletions page ----------
+rows = []
+for j in ("IN", "NG", "LK"):
+    for aid, d in sorted(deleted.get(j, []), key=lambda x: (x[1] or "")):
+        sub = apps[(apps.jurisdiction == j) & (apps.app_id == aid)]
+        title = sub.iloc[0]["title"] if len(sub) else aid
+        comp = sub.iloc[0]["composite"] if len(sub) else None
+        band = sub.iloc[0]["band"] if len(sub) else None
+        part = bool(sub.iloc[0]["partial"]) if len(sub) else False
+        rows.append('<tr><td>' + j + '</td><td><a href="apps/' + slug(j, aid) + '.html">' + esc(title) + '</a></td>'
+                    '<td><code>' + esc(aid) + '</code></td><td>' + esc(d) + '</td><td>' + score_badge(comp, band, part) + '</td></tr>')
+cnt = {j: len(deleted.get(j, [])) for j in ("IN", "NG", "LK")}
+del_html = ('<div class="cards">'
+            "<div class='card'><div class='mut'>IN deleted</div><div style='font-size:28px;font-weight:800'>" + str(cnt["IN"]) + "</div></div>"
+            "<div class='card'><div class='mut'>NG deleted</div><div style='font-size:28px;font-weight:800'>" + str(cnt["NG"]) + "</div></div>"
+            "<div class='card'><div class='mut'>LK deleted (2026-09-21 recheck)</div><div style='font-size:28px;font-weight:800'>" + str(cnt["LK"]) + "</div></div>"
+            "</div>")
+del_page = ('<h1>Deleted from the Play Store</h1>'
+            '<p>Apps captured in a harvest and later absent from the store. Deletion is one of the strongest '
+            'end-state signals: either the platform enforced against abuse, or the operator burned the listing. '
+            'Either way the snapshot is the record. IN/NG counts are from the historical corpora (records where the '
+            'app was already gone or later verified absent); LK is a live recheck on 2026-09-21.</p>'
+            + del_html +
+            '<table><tr><th>Jur</th><th>App</th><th>appId</th><th>Deleted on</th><th>Score at capture</th></tr>'
+            + "".join(rows) + '</table>' + DISC)
+open(os.path.join(SITE, "deletions.html"), "w").write(page("Deleted apps", del_page))
 
 # ---------- methodology ----------
 fam_rows = "".join(f"<tr><td><b>{esc(k)}</b> {esc(v['name'])}</td><td>{v['weight']}</td><td>{esc(v.get('description',''))}</td>"
