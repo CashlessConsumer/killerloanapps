@@ -62,7 +62,8 @@ for cid in CORPORA:
     sub = apps[apps.jurisdiction == cid]
     g = 0
     for r in sub.itertuples():
-        if av.get((cid, r.app_id)) == "deleted" or r.app_id in dict(deleted.get(cid, [])):
+        if (av.get((cid, r.app_id)) == "deleted" or r.app_id in dict(deleted.get(cid, []))
+                or bool(getattr(r, "gone_from_store", False))):
             g += 1
     GONE[cid] = g
     LIVE_CT[cid] = len(sub) - g
@@ -208,7 +209,8 @@ for cid, c in CORPORA.items():
     delmap = dict(deleted.get(cid, []))
     rows = []
     for r in sub.itertuples():
-        gone = av.get((cid, r.app_id)) == "deleted" or r.app_id in delmap
+        gone = (av.get((cid, r.app_id)) == "deleted" or r.app_id in delmap
+                or bool(getattr(r, "gone_from_store", False)))
         mark = ' <span class="badge b-severe">DELETED from Play</span>' if gone else ""
         rows.append(f"<tr><td><a href='../apps/{slug(cid, r.app_id)}.html'>{esc(r.title)}</a>{mark}</td>"
                     f"<td>{esc(r.installs)}</td><td>{esc(r.legal_name)}</td><td>{score_badge(r.composite, r.band, r.partial)}</td></tr>")
@@ -262,7 +264,8 @@ for r in apps.itertuples():
     try: flags = json.loads(r.flags) if isinstance(r.flags, str) else list(r.flags or [])
     except Exception: flags = []
     flag_html = "".join(f"<li><code>{esc(f)}</code></li>" for f in flags) or "<li>none</li>"
-    gone = av.get(key) == "deleted" or key in delall
+    gone = (av.get(key) == "deleted" or key in delall
+            or bool(getattr(r, "gone_from_store", False)))
     gone_html = ('<p class="disclaimer"><b>Deleted from Google Play.</b> This listing was absent at the latest '
                  'availability recheck (or is in the historical deletion record). The snapshot above is the only '
                  'remaining structured record.</p>') if gone else ""
@@ -279,7 +282,7 @@ for r in apps.itertuples():
 <p>{score_badge(r.composite, r.band, r.partial)} · installs {esc(r.installs)} · rating {esc(r.score)} ({esc(r.ratings)}) · updated {esc(r.updated)}</p>
 <p class="mut">Corpus: <a href="../{c['path']}">{esc(c['label'])}</a>
 <span class="badge {'k-live' if c['kind']=='live' else 'k-hist'}">{'live' if c['kind']=='live' else 'historical'}</span>
-· harvested {esc(c['harvest'])}</p>
+· harvested {esc(c['harvest'])}{(" · last seen in a harvest snapshot " + esc(str(r.last_seen))) if getattr(r, "last_seen", None) and getattr(r, "gone_from_store", False) else ""}</p>
 {DISC}
 <h2>Score breakdown <small class="mut">(rubric {esc(r.rubric_version)})</small></h2>
 {sub_table(r)}

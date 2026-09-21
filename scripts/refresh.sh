@@ -22,6 +22,14 @@ mkdir -p data
   done
   echo "--- warehouse ---"
   python3 scripts/build_warehouse.py
+  echo "--- prune old snapshots (keep newest 2 per live corpus) ---"
+  for cc in $LIVE_CC; do
+    # the accumulated record lives in data/apps.json + the warehouse, so old raw
+    # snapshots are not needed; keep two for safety, drop the rest (untracked).
+    ls -1t data/harvests/${cc^^}_*.db 2>/dev/null | tail -n +3 | while read -r f; do
+      echo "pruned $f"; rm -f "$f"
+    done
+  done
   echo "--- availability recheck (live corpora) ---"
   python3 scripts/check_deletions.py
   echo "--- score ---"
