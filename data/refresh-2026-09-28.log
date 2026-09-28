@@ -1,0 +1,98 @@
+=== killerloanapps refresh 2026-09-28 · 2026-09-28T01:03:39Z ===
+--- harvest in ---
+search 'loan': 30
+search 'personal loan': 30
+search 'instant loan': 30
+search 'cash loan': 30
+search 'online loan': 30
+search 'fast loan': 30
+search 'salary loan': 30
+search 'borrow money': 30
+search 'paisa loan': 29
+search 'udhaar': 27
+search 'rupee loan': 29
+search 'lending app': 30
+search 'पैसा लोन': 50
+search 'तत्काल लोन': 50
+unique candidates: 116
+1/116 kept=1 skipped=0
+11/116 kept=11 skipped=0
+21/116 kept=21 skipped=0
+31/116 kept=31 skipped=0
+41/116 kept=41 skipped=0
+51/116 kept=51 skipped=0
+61/116 kept=61 skipped=0
+71/116 kept=71 skipped=0
+81/116 kept=81 skipped=0
+91/116 kept=89 skipped=2
+101/116 kept=99 skipped=2
+111/116 kept=109 skipped=2
+DONE kept=114 skipped=2 perms=1802 -> /home/workspace/Projects/killerloanapps/data/harvests/IN_2026-09-28.db
+--- harvest lk ---
+search 'loan': 30
+search 'personal loan': 8
+search 'instant loan': 27
+search 'cash loan': 29
+search 'online loan': 28
+search 'fast loan': 26
+search 'salary loan': 29
+search 'borrow money': 30
+search 'lending app': 30
+search 'urgent cash': 30
+search 'ණය': 29
+search 'මුදල් ණය': 50
+search 'கடன்': 50
+search 'கடன் அப்ளிகேஷன்': 50
+unique candidates: 215
+1/215 kept=1 skipped=0
+11/215 kept=11 skipped=0
+21/215 kept=21 skipped=0
+31/215 kept=30 skipped=1
+41/215 kept=40 skipped=1
+51/215 kept=50 skipped=1
+61/215 kept=60 skipped=1
+81/215 kept=75 skipped=6
+101/215 kept=91 skipped=10
+111/215 kept=101 skipped=10
+121/215 kept=111 skipped=10
+131/215 kept=120 skipped=11
+141/215 kept=129 skipped=12
+151/215 kept=137 skipped=14
+181/215 kept=150 skipped=31
+201/215 kept=164 skipped=37
+211/215 kept=174 skipped=37
+DONE kept=178 skipped=37 perms=1946 -> /home/workspace/Projects/killerloanapps/data/harvests/LK_2026-09-28.db
+--- warehouse ---
+carried 1226 rows -> availability
+carried 1056 rows -> deleted_log
+prior apps.json: 1226 rows
+IN {'apps': 243, 'permissions': 3426, 'deleted': 0, 'snapshots': 2, 'gone_from_store': 129, 'corpus': 'India harvest 2026-09-21 via GPlayAPI v2 (killerloanapps playbook run)', 'country': 'in', 'status': 'live', 'harvested_on': '2026-09-28', 'source': '/home/workspace/Projects/killerloanapps/data/harvests/IN_2026-09-28.db'}
+LK {'apps': 233, 'permissions': 2261, 'deleted': 0, 'snapshots': 2, 'gone_from_store': 55, 'corpus': 'Sri Lanka harvest 2026-09-20 via GPlayAPI v2', 'country': 'lk', 'status': 'live', 'harvested_on': '2026-09-28', 'source': '/home/workspace/Projects/killerloanapps/data/harvests/LK_2026-09-28.db'}
+IN_2020_2022 {'apps': 725, 'permissions': 10772, 'deleted': 339, 'snapshots': 1, 'gone_from_store': 0, 'corpus': 'India corpus Dec 2020 - Feb 2022 (dbhub copy, byte-exact)', 'country': 'in', 'status': 'historical', 'harvested_on': '2022-02-27', 'source': '/home/workspace/Datasets/loanapps-in/loanapps_dbhub_20220227.db'}
+NG_2022 {'apps': 117, 'permissions': 2100, 'deleted': 0, 'snapshots': 1, 'gone_from_store': 0, 'corpus': 'Nigeria corpus Mar 2022 (DStudio x CC shared drive)', 'country': 'ng', 'status': 'historical', 'harvested_on': '2022-03-04', 'source': '/home/workspace/Datasets/loanappsdata_NG.db'}
+warehouse: /home/workspace/Projects/killerloanapps/data/killerloanapps.duckdb | apps.json: 1318
+--- availability recheck (live corpora) ---
+100/1318 {'live': 99, 'deleted': 1, 'error': 0}
+200/1318 {'live': 198, 'deleted': 2, 'error': 0}
+300/1318 {'live': 298, 'deleted': 2, 'error': 0}
+400/1318 {'live': 398, 'deleted': 2, 'error': 0}
+500/1318 {'live': 479, 'deleted': 21, 'error': 0}
+600/1318 {'live': 495, 'deleted': 105, 'error': 0}
+700/1318 {'live': 507, 'deleted': 193, 'error': 0}
+800/1318 {'live': 520, 'deleted': 280, 'error': 0}
+900/1318 {'live': 530, 'deleted': 370, 'error': 0}
+1000/1318 {'live': 534, 'deleted': 466, 'error': 0}
+1100/1318 {'live': 538, 'deleted': 562, 'error': 0}
+1200/1318 {'live': 544, 'deleted': 656, 'error': 0}
+1300/1318 {'live': 562, 'deleted': 738, 'error': 0}
+DONE checked=1318 seeded=0 {'live': 573, 'deleted': 745, 'error': 0}
+deleted_log IN: 2 | availability {'deleted': 2, 'live': 241}
+deleted_log LK: 0 | availability {'live': 233}
+deleted_log IN_2020_2022: 968 | availability {'live': 70, 'deleted': 655}
+deleted_log NG_2022: 88 | availability {'deleted': 88, 'live': 29}
+--- score ---
+scored 1318 rows | [('elevated', 669), ('low', 368), ('high', 276), ('severe', 5)]
+wrote data/scores.json
+--- site ---
+site: index + 2 live + 2 historical corpus pages + 1318 app pages + deletions + methodology | /home/workspace/Projects/killerloanapps/site
+--- publish ---

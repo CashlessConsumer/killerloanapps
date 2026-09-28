@@ -146,9 +146,10 @@ def page(title, body, rel=""):
 <footer>CashlessConsumer · data: Play Store metadata + permissions, own harvests · scoring: rubric {esc(RUBRIC['version'])} (experimental) · <a href="{rel}methodology.html">what this score is not</a></footer>
 </main></body></html>"""
 
-DISC = ('<div class="disclaimer"><b>Risk signals, not verdicts.</b> Scores flag <i>indicators</i> of abusive-lending '
-        'behaviour from public app-store data. A high score is not proof of illegality; a low score is not a safety '
-        'certificate. See <a href="methodology.html">methodology</a>.</div>')
+def disc(rel=""):
+    return ('<div class="disclaimer"><b>Risk signals, not verdicts.</b> Scores flag <i>indicators</i> of abusive-lending '
+            'behaviour from public app-store data. A high score is not proof of illegality; a low score is not a safety '
+            f'certificate. See <a href="{rel}methodology.html">methodology</a>.</div>')
 
 # ---------- index ----------
 def kind_card(cid):
@@ -199,7 +200,7 @@ Deletions below are from the original corpus record, not a fresh check.</p>
 <h2>Highest-scoring apps (live lending scope)</h2>
 <p class="mut">Headline counts cover lending-scope apps only. The keyword harvest also catches general payments, shopping, ledger and foreign listings; they stay in the dataset and on each corpus page under <i>out of lending scope</i> — labelled, not dropped (<code>data/scope_rules.yaml</code>).</p>
 <table><tr><th>App</th><th>Jur</th><th>Legal entity</th><th>Score</th></tr>{trows}</table>
-{DISC}"""))
+{disc()}"""))
 
 # ---------- corpus pages ----------
 for cid, c in CORPORA.items():
@@ -248,7 +249,7 @@ for cid, c in CORPORA.items():
 {line}
 <table><tr><th>App</th><th>Installs</th><th>Legal entity (paperwork)</th><th>Score</th></tr>{''.join(rows)}</table>
 {offscope_html}
-{DISC}""", rel="../"))
+{disc("../")}""", rel="../"))
 
 # ---------- app pages ----------
 delall = {}
@@ -283,7 +284,7 @@ for r in apps.itertuples():
 <p class="mut">Corpus: <a href="../{c['path']}">{esc(c['label'])}</a>
 <span class="badge {'k-live' if c['kind']=='live' else 'k-hist'}">{'live' if c['kind']=='live' else 'historical'}</span>
 · harvested {esc(c['harvest'])}{(" · last seen in a harvest snapshot " + esc(str(r.last_seen))) if getattr(r, "last_seen", None) and getattr(r, "gone_from_store", False) else ""}</p>
-{DISC}
+{disc("../")}
 <h2>Score breakdown <small class="mut">(rubric {esc(r.rubric_version)})</small></h2>
 {sub_table(r)}
 <h3>Triggered signals</h3><ul>{flag_html}</ul>
@@ -337,13 +338,23 @@ for kind, ids in (("Live corpora", live_ids), ("Historical corpora", hist_ids)):
         rows = []
         for aid, d, src in dels:
             sub = apps[(apps.jurisdiction == cid) & (apps.app_id == aid)]
+            recovered = False
+            if not len(sub) and aid[:1].isdigit():
+                # the 2020-22 corpus log glued a row counter onto some ids
+                alt = aid[1:]
+                alt_sub = apps[(apps.jurisdiction == cid) & (apps.app_id == alt)]
+                if len(alt_sub):
+                    sub, aid, recovered = alt_sub, alt, True
             title = sub.iloc[0]["title"] if len(sub) else aid
             comp = sub.iloc[0]["composite"] if len(sub) else None
             band = sub.iloc[0]["band"] if len(sub) else None
             part = bool(sub.iloc[0]["partial"]) if len(sub) else False
-            rows.append('<tr><td><a href="apps/' + slug(cid, aid) + '.html">' + esc(title) + '</a></td>'
+            row_app = ('<a href="apps/' + slug(cid, aid) + '.html">' + esc(title) + '</a>'
+                       if len(sub) else esc(title))
+            rows.append('<tr><td>' + row_app + '</td>'
                         '<td><code>' + esc(aid) + '</code></td><td>' + esc(d) + '</td>'
-                        '<td class="mut">' + esc(src) + ("" if len(sub) else " (not in tracked set)") + '</td>'
+                        '<td class="mut">' + esc(src) + ("" if len(sub) else " (not in tracked set)")
+                        + (" (id recovered)" if recovered else "") + '</td>'
                         '<td>' + score_badge(comp, band, part) + '</td></tr>')
         n = len(dels)
         ntot = len(apps[apps.jurisdiction == cid])
@@ -360,7 +371,7 @@ burned the listing. Either way the snapshot is the record. Two evidence classes 
 <b>corpus record</b> (gaps logged while a corpus was being built) and <b>availability recheck</b>
 (every app id checked against its own storefront on {esc(TODAY)} via GPlayAPI v2 — method in <code>scripts/check_deletions.py</code>).</p>
 {''.join(sections)}
-{DISC}"""))
+{disc()}"""))
 
 # ---------- methodology (generated each build) ----------
 live_rows = "".join(
@@ -427,7 +438,7 @@ RBI and the state police in India, FCCPC in Nigeria) — we say what the listing
 <li>Not real-time. The snapshot date on every page is the date of the last harvest or recheck; apps change silently.</li>
 <li>No personal data. Developer/legal contacts here are the business contacts the developer published on the store.</li>
 </ul>
-{DISC}"""))
+{disc()}"""))
 
 for stray in ("jur_in.tmp", "jur_lk.tmp", "jur_ng.tmp"):
     p = os.path.join(SITE, stray)
@@ -435,12 +446,6 @@ for stray in ("jur_in.tmp", "jur_lk.tmp", "jur_ng.tmp"):
         os.remove(p)
 
 n_app_pages = len(os.listdir(os.path.join(SITE, "apps")))
-
-STALE = ["jurisdiction/ng.html"]
-for rel in STALE:
-    p = os.path.join(SITE, rel)
-    if os.path.exists(p):
-        os.remove(p)
 
 print(f"site: index + {len(live_ids)} live + {len(hist_ids)} historical corpus pages "
       f"+ {n_app_pages} app pages + deletions + methodology | {SITE}")

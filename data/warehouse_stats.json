@@ -1,27 +1,27 @@
 {
  "IN": {
-  "apps": 229,
-  "permissions": 3241,
+  "apps": 243,
+  "permissions": 3426,
   "deleted": 0,
-  "snapshots": 1,
-  "gone_from_store": 0,
+  "snapshots": 2,
+  "gone_from_store": 129,
   "corpus": "India harvest 2026-09-21 via GPlayAPI v2 (killerloanapps playbook run)",
   "country": "in",
   "status": "live",
-  "harvested_on": "2026-09-21",
-  "source": "/home/workspace/Projects/killerloanapps/data/harvests/IN_2026-09-21.db"
+  "harvested_on": "2026-09-28",
+  "source": "/home/workspace/Projects/killerloanapps/data/harvests/IN_2026-09-28.db"
  },
  "LK": {
-  "apps": 155,
-  "permissions": 1567,
+  "apps": 233,
+  "permissions": 2261,
   "deleted": 0,
-  "snapshots": 1,
-  "gone_from_store": 0,
+  "snapshots": 2,
+  "gone_from_store": 55,
   "corpus": "Sri Lanka harvest 2026-09-20 via GPlayAPI v2",
   "country": "lk",
   "status": "live",
-  "harvested_on": "2026-09-20",
-  "source": "/home/workspace/Projects/killerloanapps/data/harvests/LK_2026-09-20.db"
+  "harvested_on": "2026-09-28",
+  "source": "/home/workspace/Projects/killerloanapps/data/harvests/LK_2026-09-28.db"
  },
  "IN_2020_2022": {
   "apps": 725,
