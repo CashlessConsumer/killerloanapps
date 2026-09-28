@@ -88,8 +88,8 @@ for term in SEARCH_TERMS:
     d = api("/api/apps/", {"country": CC, "lang": "en", "q": term, "num": 100})
     ids = [r["appId"] for r in (d or {}).get("results", []) if r.get("appId")]
     print(f"search '{term}': {len(ids)}")
-    for a in ids:
-        candidates.setdefault(a, set()).add(term)
+    for _id in ids:
+        candidates.setdefault(_id, set()).add(term)
     time.sleep(0.8)
 
 print("unique candidates:", len(candidates))
