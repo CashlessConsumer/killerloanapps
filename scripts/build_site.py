@@ -6,7 +6,7 @@ Corpus model: `jurisdiction` in the warehouse is a CORPUS id, not a country.
   Historical corpora (frozen snapshots):     IN_2020_2022, NG_2022
 Live corpora get jurisdiction/ pages; historical corpora get historical/ pages.
 """
-import json, html, os, shutil, duckdb, yaml
+import json, html, os, shutil, duckdb, yaml, urllib.parse
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA = os.path.join(ROOT, "data")
@@ -68,6 +68,12 @@ def is_gone(cid, app_id):
     if st is None and app_id in dict(deleted.get(cid, [])):
         return True
     return False
+
+def store_url(cid, app_id):
+    """Play Store listing URL for an app in its corpus's storefront."""
+    cc = CORPORA.get(cid, {}).get("country", "in")
+    return ("https://play.google.com/store/apps/details?id="
+            + urllib.parse.quote(app_id) + "&gl=" + cc.upper())
 
 GONE, LIVE_CT = {}, {}
 for cid in CORPORA:
@@ -292,7 +298,7 @@ for r in apps.itertuples():
     body = f"""
 <h1>{esc(r.title)} <small class="mut">[{esc(c['label'])}]</small> <span class="badge {('k-live' if r.scope == 'lending' else 'k-hist')}">{esc(str(r.scope).replace('_', ' '))}</span></h1>
 {gone_html}
-<p>{score_badge(r.composite, r.band, r.partial)} · installs {esc(r.installs)} · rating {esc(r.score)} ({esc(r.ratings)}) · updated {esc(r.updated)}</p>
+<p>{score_badge(r.composite, r.band, r.partial)} · installs {esc(r.installs)} · rating {esc(r.score)} ({esc(r.ratings)}) · updated {esc(r.updated)} · <a href="{store_url(cid, r.app_id)}" target="_blank" rel="noopener nofollow">Google Play ↗</a></p>
 <p class="mut">Corpus: <a href="../{c['path']}">{esc(c['label'])}</a>
 <span class="badge {'k-live' if c['kind']=='live' else 'k-hist'}">{'live' if c['kind']=='live' else 'historical'}</span>
 · harvested {esc(c['harvest'])}{(" · last seen in a harvest snapshot " + esc(str(r.last_seen))) if getattr(r, "last_seen", None) and getattr(r, "gone_from_store", False) else ""}</p>
@@ -372,6 +378,8 @@ for kind, ids in (("Live corpora", live_ids), ("Historical corpora", hist_ids)):
             part = bool(sub.iloc[0]["partial"]) if len(sub) else False
             row_app = ('<a href="apps/' + slug(cid, aid) + '.html">' + esc(title) + '</a>'
                        if len(sub) else esc(title))
+            row_app += (' <a href="' + store_url(cid, aid) + '" target="_blank" rel="noopener nofollow" '
+                        'title="check this listing on Play">↗</a>')
             rows.append('<tr><td>' + row_app + '</td>'
                         '<td><code>' + esc(aid) + '</code></td><td>' + esc(d) + '</td>'
                         '<td class="mut">' + esc(src) + ("" if len(sub) else " (not in tracked set)")
