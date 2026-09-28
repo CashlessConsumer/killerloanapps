@@ -11,7 +11,7 @@ import datetime, os, sqlite3, sys, time, urllib.parse
 import concurrent.futures as cf
 import requests, duckdb
 
-B = "https://gplayapiv2.fly.dev"
+B = os.environ.get("GPLAY_BASE", "https://gplayapiv2.fly.dev")
 DB = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "killerloanapps.duckdb")
 TODAY = datetime.date.today().isoformat()
 
@@ -47,9 +47,12 @@ def main(limit=None, only=None):
             key = ("IN_2020_2022", aid)
             if key not in known:
                 con.execute("INSERT INTO deleted_log VALUES ('IN_2020_2022', ?, ?, ?, 'seeded from 2021-22 corpus loanapp_deletedapps')",
-                            (aid, str(d)[:10] if d else None, TODAY))
+                            (aid, str(d)[:10] if d else None, None))
                 n_seed += 1
         s.close()
+        # backfill: seeded rows wrongly carried last_live=TODAY from earlier runs
+        con.execute("UPDATE deleted_log SET last_live = NULL "
+                    "WHERE note LIKE 'seeded from%' AND last_live = DATE ? AND first_missing < DATE ?", [TODAY, TODAY])
     except Exception as e:
         print("seed:", e)
     # country + kind per corpus
@@ -69,6 +72,12 @@ def main(limit=None, only=None):
             continue
         country = corpora[cid][0]
         args += [(cid, country, r[1]) for r in con.execute(q, [cid]).fetchall()]
+        # issue #2: ids living only in deleted_log (seeded, never in `apps`) must be
+        # rechecked too, so a re-listed app leaves the deletion record.
+        in_apps = {r[0] for r in con.execute(q, [cid]).fetchall()}
+        for (j, aid) in con.execute("SELECT jurisdiction, app_id FROM deleted_log WHERE jurisdiction = ?", [cid]).fetchall():
+            if aid not in in_apps:
+                args.append((cid, country, aid))
     if limit:
         args = args[:limit]
     prev = dict(((j, a), st) for j, a, st in con.execute("SELECT jurisdiction, app_id, status FROM availability").fetchall())
@@ -89,7 +98,9 @@ def main(limit=None, only=None):
                 row = con.execute("SELECT last_live FROM deleted_log WHERE jurisdiction=? AND app_id=?", (jur, aid)).fetchone()
                 if not row:
                     con.execute("INSERT INTO deleted_log VALUES (?, ?, ?, ?, ?)", (jur, aid, TODAY, None if was is None else TODAY, "play availability check"))
-            if st == "live" and was == "deleted":
+            if st == "live":
+                # any live storefront verdict refutes a deletion claim — seeded
+                # rows (issue #2) have no prior availability row yet
                 con.execute("DELETE FROM deleted_log WHERE jurisdiction=? AND app_id=?", (jur, aid))
             if done % 100 == 0:
                 con.commit()
