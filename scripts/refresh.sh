@@ -43,7 +43,9 @@ step() { # step <name> <cmd...> — runs, and on failure writes an explicit mark
     echo "--- harvest skipped (SKIP_HARVEST=1) ---"
   else
     for cc in $LIVE_CC; do
-      step "harvest $cc" python3 scripts/harvest.py --country "$cc" --label "$LABEL"
+      # seeded harvest + staging host: corpus verification needs ~2 req/app, past prod limits
+      step "harvest $cc" env GPLAY_BASE="${GPLAY_BASE:-https://gplayapidev.fly.dev}" \
+        python3 scripts/harvest.py --country "$cc" --label "$LABEL" --seed
     done
   fi
   step "warehouse" python3 scripts/build_warehouse.py

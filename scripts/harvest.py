@@ -8,7 +8,7 @@ Writes data/harvests/<CC>_<label>.db with the killerloanapps schema
 """
 import argparse, json, os, sqlite3, time, urllib.parse, requests
 
-B = "https://gplayapiv2.fly.dev"
+B = os.environ.get("GPLAY_BASE", "https://gplayapiv2.fly.dev")
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 TERMS = {
@@ -32,6 +32,8 @@ ap = argparse.ArgumentParser()
 ap.add_argument("--country", required=True)
 ap.add_argument("--label", required=True)
 ap.add_argument("--terms", default="")
+ap.add_argument("--seed", action="store_true",
+                    help="also verify every known live-corpus app id (from data/apps.json) into this snapshot")
 a = ap.parse_args()
 CC = a.country.lower()
 SEARCH_TERMS = TERMS[CC] + ([t.strip() for t in a.terms.split(",") if t.strip()] if a.terms else [])
@@ -65,12 +67,17 @@ for s in extra:
         pass
 conn.commit()
 
-def api(path, params, tries=3):
+def api(path, params, tries=4):
     for i in range(tries):
         try:
             r = requests.get(f"{B}{path}", params=params, timeout=30)
             if r.status_code == 200:
                 return r.json()
+            if r.status_code == 429:   # rate limited — back off hard, then retry
+                wait = 20 * (i + 1)
+                print(f"  429 on {path} — sleeping {wait}s")
+                time.sleep(wait)
+                continue
         except Exception as e:
             print("  err", path, params, e)
         time.sleep(1.5 * (i + 1))
@@ -91,17 +98,11 @@ def qualifies(r):
     text = " ".join(str(r.get(f, "")) for f in ("title", "summary", "description")).lower()
     return any(k in text for k in KW)
 
-rows, perm_rows, skipped = 0, 0, 0
 PLAY_COLS = None
-for n, (app_id, terms) in enumerate(candidates.items()):
-    d = api(f"/api/apps/{urllib.parse.quote(app_id)}", {"country": CC, "lang": "en"})
-    r = (d or {}).get("results", d or {})
-    if not isinstance(r, dict) or "error" in r or not r.get("title"):
-        skipped += 1
-        continue
-    if not qualifies(r):
-        skipped += 1
-        continue
+
+def store_app(conn, app_id, r):
+    """Write one detail record (+ permissions) into the snapshot DB. Idempotent."""
+    global PLAY_COLS
     if PLAY_COLS is None:
         PLAY_COLS = [x[1] for x in conn.execute("PRAGMA table_info(loanapp_playdata)")]
     _h = r.get("histogram")
@@ -157,17 +158,59 @@ for n, (app_id, terms) in enumerate(candidates.items()):
     conn.execute(
         f"INSERT OR REPLACE INTO loanapp_playdata ({','.join(chr(34)+c+chr(34) for c in cols)}) VALUES ({','.join('?'*len(cols))})",
         [vals[c] for c in cols])
-    rows += 1
     pd = api(f"/api/apps/{urllib.parse.quote(app_id)}/permissions", {})
     perms = (pd or {}).get("results", [])
     for p in perms:
         conn.execute("INSERT INTO loanapp_permissions (appId, permission) VALUES (?,?)",
                      (app_id, f"{p.get('type','')}: {p.get('permission','')}"))
-    perm_rows += len(perms)
+    return 1 + len(perms)
+
+rows, perm_rows, skipped = 0, 0, 0
+for n, (app_id, terms) in enumerate(candidates.items()):
+    d = api(f"/api/apps/{urllib.parse.quote(app_id)}", {"country": CC, "lang": "en"})
+    r = (d or {}).get("results", d or {})
+    if not isinstance(r, dict) or "error" in r or not r.get("title"):
+        skipped += 1
+        continue
+    if not qualifies(r):
+        skipped += 1
+        continue
+    got = store_app(conn, app_id, r)
+    rows += 1
+    perm_rows += got - 1
     if n % 10 == 0:
         print(f"{n+1}/{len(candidates)} kept={rows} skipped={skipped}")
     conn.commit()
     time.sleep(0.5)
+
+# --- corpus seed (issue #4): verify every known live-corpus id directly so the
+# snapshot stays complete regardless of search recall. Search only finds NEW apps;
+# retention is deterministic id verification.
+if a.seed:
+    appsjson = os.path.join(ROOT, "data", "apps.json")
+    known = [row for row in json.load(open(appsjson))["apps"]
+             if row["jurisdiction"].upper().startswith(CC.upper())]
+    already = set(candidates)
+    seeded, gone = 0, 0
+    print(f"seed: verifying {len(known)} known {CC.upper()} corpus ids")
+    for n, row in enumerate(known):
+        app_id = row["app_id"]
+        d = api(f"/api/apps/{urllib.parse.quote(app_id)}", {"country": CC, "lang": "en"})
+        r = (d or {}).get("results", d or {})
+        if not isinstance(r, dict) or "error" in r or not r.get("title"):
+            gone += 1   # absent from this snapshot — carry-forward + recheck will judge it
+        else:
+            got = store_app(conn, app_id, r)
+            seeded += 1
+            perm_rows += got - 1
+            if app_id not in already:
+                rows += 1   # search missed it this run; seed retained it
+        if n % 25 == 0:
+            print(f"  seed {n+1}/{len(known)} verified={seeded} absent={gone}")
+            conn.commit()
+        time.sleep(0.4)
+    print(f"seed DONE verified={seeded} absent={gone}")
+    conn.commit()
 
 conn.commit()
 print(f"DONE kept={rows} skipped={skipped} perms={perm_rows} -> {DB_PATH}")
