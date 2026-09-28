@@ -103,14 +103,24 @@ This is why the APK lane (I5) and the tracing lane matter more than they did for
 (`/api/apps/<id>?country=<cc>`), writing `availability` (jurisdiction, app_id, last_checked, status)
 and appending `deleted_log` (first_missing, last_live, note). Re-runs preserve the original
 `first_missing`; a listing that returns is recorded as live again. Historical ids are seeded from the
-2020–22 corpus's own `loanapp_deletedapps` table, so `deleted_log` carries the full attrition record
-(**1,055** entries: 743 recheck-absent + 312 corpus-era ids never in the scored set).
+2020–22 corpus's own `loanapp_deletedapps` table, so `deleted_log` carries the full attrition record.
+Seeded ids not in `apps` are rechecked too; a live storefront verdict refutes the claim and removes
+the `deleted_log` row. Set `GPLAY_BASE` to point the recheck at another host (staging has the raised
+rate limit).
 
 ```bash
 python3 scripts/check_deletions.py        # all corpora by default; pass "live" for live only
 python3 scripts/score.py                  # applies platform_removed +15
 python3 scripts/build_site.py             # GONE badges + deletions.html
 ```
+
+**Storefront availability is the single source of truth for deletions.** `gone_from_store`
+(absence from the newest keyword harvest) is NOT evidence of deletion — search recall varies
+between runs (2026-09-28 QA: 127/129 IN + 55/55 LK harvest-absent apps were live on Play). It renders
+as "absent from the latest harvest, recheck confirms live", never as a GONE badge or score bump.
+Historical era-deletion records count only when the id has never been rechecked. Issues #1–#3
+(closed) document the QA that established this. `refresh.sh` is fail-loud (per-step FAILED markers),
+flock-locked, and refuses a dirty tree.
 
 State at the 2026-09-21 recheck — `IN_2020_2022` 655 gone / 70 live · `NG_2022` 88 gone / 29 live ·
 `IN` 229 live · `LK` 155 live. The live corpora being fully present is the expected shape: they were
