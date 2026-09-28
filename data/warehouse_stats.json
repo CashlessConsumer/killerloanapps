@@ -1,10 +1,10 @@
 {
  "IN": {
-  "apps": 243,
-  "permissions": 3426,
+  "apps": 251,
+  "permissions": 3562,
   "deleted": 0,
   "snapshots": 2,
-  "gone_from_store": 129,
+  "gone_from_store": 2,
   "corpus": "India harvest 2026-09-21 via GPlayAPI v2 (killerloanapps playbook run)",
   "country": "in",
   "status": "live",
@@ -12,11 +12,11 @@
   "source": "/home/workspace/Projects/killerloanapps/data/harvests/IN_2026-09-28.db"
  },
  "LK": {
-  "apps": 233,
-  "permissions": 2261,
+  "apps": 253,
+  "permissions": 2479,
   "deleted": 0,
   "snapshots": 2,
-  "gone_from_store": 55,
+  "gone_from_store": 0,
   "corpus": "Sri Lanka harvest 2026-09-20 via GPlayAPI v2",
   "country": "lk",
   "status": "live",

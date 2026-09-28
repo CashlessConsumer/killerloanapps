@@ -37,8 +37,13 @@ COUNTRY_LABEL = {"in": "India", "lk": "Sri Lanka", "ng": "Nigeria"}
 
 
 def resolve(pathspec):
-    """Newest file matching a glob pathspec (relative to ROOT or absolute)."""
-    hits = resolve_all(pathspec)
+    """Newest file matching a glob pathspec (relative to ROOT or absolute).
+
+    Newest by mtime, not lexicographic name order — suffixes like -qa2 must
+    not make a newer snapshot sort before an older one."""
+    import glob, os
+    hits = sorted(glob.glob(str(ROOT / pathspec) if not os.path.isabs(pathspec) else pathspec),
+                  key=lambda f: (os.path.getmtime(f), f))
     return hits[-1] if hits else None
 
 

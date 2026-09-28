@@ -30,6 +30,11 @@ Adding a jurisdiction = add a row to `CORPORA` in `build_warehouse.py`, a keywor
 `harvest.py`'s `TERMS`/`LANG` maps, a country code in `check_deletions.py`'s `CC`, and a
 `LOCAL_HINT` entry in `score.py`.
 
+Weekly harvests are **corpus-seeded** (`harvest.py --seed`, issue #4): after the search sweep
+(new apps only), every known live-corpus id is verified directly via detail+permissions fetch into
+the same snapshot, so snapshot completeness never depends on search recall. Runs against staging
+(`GPLAY_BASE`, 1000 req/15 min) — a seeded IN+LK cycle is ~1,600 requests.
+
 ## Scope rules
 `data/scope_rules.yaml` classifies each app as `lending` (headline), `adjacent` (listed separately),
 or `out_of_scope` (keyword noise: payments, shopping, ledgers, foreign listings). Headline counts,
