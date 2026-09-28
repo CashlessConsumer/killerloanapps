@@ -54,9 +54,12 @@ Query: `duckdb data/killerloanapps.duckdb -c "SELECT jurisdiction,status,COUNT(*
 Live corpora accumulate. `build_warehouse.py` unions **every** snapshot matching
 `data/harvests/<CC>_*.db` (oldest → newest, newest row wins) and then carries forward any live
 app present in the previous `data/apps.json` but absent from all current snapshots, marking it
-`gone_from_store` with its `last_seen`. `score.py` treats `gone_from_store` as the
-`platform_removed` (+15) signal exactly like a storefront-confirmed deletion, and pages show it as
-a deletion.
+`gone_from_store` with its `last_seen`. `gone_from_store` is a *carry-forward hint, not a
+deletion*: keyword-search recall varies between runs, so absence from a snapshot is never
+evidence of removal. Only `availability.status == 'deleted'` (storefront recheck) triggers
+`platform_removed` (+15) and GONE badges; harvest-absent apps render as "absent from the latest
+harvest, recheck confirms live". (2026-09-28 QA: treating it as deletion falsely flagged
+127/129 IN + 55/55 LK live apps — issues #1-#3, closed.)
 
 Consequences: an app that vanishes from Play is remembered instead of dropping out of the corpus;
 `first_seen` / `last_seen` / `snapshots` on `apps` say when it was seen; `check_deletions.py` still

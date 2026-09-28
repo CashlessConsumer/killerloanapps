@@ -122,8 +122,10 @@ Historical era-deletion records count only when the id has never been rechecked.
 (closed) document the QA that established this. `refresh.sh` is fail-loud (per-step FAILED markers),
 flock-locked, and refuses a dirty tree.
 
-State at the 2026-09-21 recheck — `IN_2020_2022` 655 gone / 70 live · `NG_2022` 88 gone / 29 live ·
-`IN` 229 live · `LK` 155 live. The live corpora being fully present is the expected shape: they were
+State at the 2026-09-28 QA recheck — `IN_2020_2022` ~628 gone (storefront-confirmed) ·
+`NG_2022` 82 gone · `IN` 2 gone (`com.credit.konsala.loanvanta.loc.service`, `com.paisacash.loan`)
+· `LK` 0 gone. The 2026-09-28 refresh had claimed 184 live-corpus deletions; 182 were refuted by
+recheck and reverted (commit a5f24de). The live corpora being fully present is the expected shape: they were
 harvested days ago.
 
 ## Roadmap
