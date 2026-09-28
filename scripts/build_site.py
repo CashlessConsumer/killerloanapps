@@ -57,14 +57,22 @@ for jur, aid, d in con.execute("SELECT jurisdiction, app_id, deleted_on FROM del
 
 av = dict(((j, a), st) for j, a, st in con.execute("SELECT jurisdiction, app_id, status FROM availability").fetchall()) if HAS("availability") else {}
 
+# A deletion is what the storefront recheck says. Era/corpus deletion records count only
+# when the id has never been rechecked (no availability row); harvest absence (gone_from_store)
+# is never evidence of deletion (issue #1, 2026-09-28 QA: 127/129 IN + 55/55 LK carry-forward
+# "deletions" were live on Play).
+def is_gone(cid, app_id):
+    st = av.get((cid, app_id))
+    if st == "deleted":
+        return True
+    if st is None and app_id in dict(deleted.get(cid, [])):
+        return True
+    return False
+
 GONE, LIVE_CT = {}, {}
 for cid in CORPORA:
     sub = apps[apps.jurisdiction == cid]
-    g = 0
-    for r in sub.itertuples():
-        if (av.get((cid, r.app_id)) == "deleted" or r.app_id in dict(deleted.get(cid, []))
-                or bool(getattr(r, "gone_from_store", False))):
-            g += 1
+    g = sum(1 for r in sub.itertuples() if is_gone(cid, r.app_id))
     GONE[cid] = g
     LIVE_CT[cid] = len(sub) - g
 
@@ -210,8 +218,7 @@ for cid, c in CORPORA.items():
     delmap = dict(deleted.get(cid, []))
     rows = []
     for r in sub.itertuples():
-        gone = (av.get((cid, r.app_id)) == "deleted" or r.app_id in delmap
-                or bool(getattr(r, "gone_from_store", False)))
+        gone = is_gone(cid, r.app_id)
         mark = ' <span class="badge b-severe">DELETED from Play</span>' if gone else ""
         rows.append(f"<tr><td><a href='../apps/{slug(cid, r.app_id)}.html'>{esc(r.title)}</a>{mark}</td>"
                     f"<td>{esc(r.installs)}</td><td>{esc(r.legal_name)}</td><td>{score_badge(r.composite, r.band, r.partial)}</td></tr>")
@@ -265,11 +272,16 @@ for r in apps.itertuples():
     try: flags = json.loads(r.flags) if isinstance(r.flags, str) else list(r.flags or [])
     except Exception: flags = []
     flag_html = "".join(f"<li><code>{esc(f)}</code></li>" for f in flags) or "<li>none</li>"
-    gone = (av.get(key) == "deleted" or key in delall
-            or bool(getattr(r, "gone_from_store", False)))
-    gone_html = ('<p class="disclaimer"><b>Deleted from Google Play.</b> This listing was absent at the latest '
-                 'availability recheck (or is in the historical deletion record). The snapshot above is the only '
-                 'remaining structured record.</p>') if gone else ""
+    gone = is_gone(cid, r.app_id)
+    if gone:
+        gone_html = ('<p class="disclaimer"><b>Deleted from Google Play.</b> The latest storefront '
+                     'availability recheck did not find this listing. The snapshot above is the only '
+                     'remaining structured record.</p>')
+    elif getattr(r, "gone_from_store", False) and av.get(key) == "live":
+        gone_html = ('<p class="mut">Absent from the latest keyword harvest snapshot '
+                     '(search recall varies); the storefront recheck confirms this listing is live.</p>')
+    else:
+        gone_html = ""
     ds = ""
     if r.datasafety:
         try:
@@ -318,12 +330,18 @@ for r in apps.itertuples():
 def corpus_dels(cid):
     out = []
     seen = set()
+    returned = 0
     for aid, d in sorted(deleted.get(cid, []), key=lambda x: (x[1] or "")):
+        if av.get((cid, aid)) == "live":
+            returned += 1   # era-deleted but recheck finds it re-listed
+            continue
         out.append((aid, d, "corpus record"))
         seen.add(aid)
     for (j, aid), st in av.items():
         if j == cid and st == "deleted" and aid not in seen:
             out.append((aid, TODAY, "availability recheck"))
+    if returned:
+        out.append((f"__returned__{cid}", f"{returned} era-deleted id(s) recheck as live (re-listed since the corpus window) — counted live, not gone", "note"))
     return out
 
 TODAY = str(con.execute("SELECT MAX(last_checked) FROM availability").fetchone()[0]) if HAS("availability") else "—"
@@ -337,6 +355,9 @@ for kind, ids in (("Live corpora", live_ids), ("Historical corpora", hist_ids)):
             continue
         rows = []
         for aid, d, src in dels:
+            if aid.startswith("__returned__"):
+                rows.append(f"<tr><td colspan='4' class='mut'>{esc(d)}</td></tr>")
+                continue
             sub = apps[(apps.jurisdiction == cid) & (apps.app_id == aid)]
             recovered = False
             if not len(sub) and aid[:1].isdigit():

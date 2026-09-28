@@ -165,8 +165,8 @@ def score_all(con):
     for jur, aid, p in con.execute("SELECT jurisdiction, app_id, permission FROM permissions").fetchall():
         pmap.setdefault((jur, aid), []).append(p)
     av = dict(((j, a), st) for j, a, st in con.execute("SELECT jurisdiction, app_id, status FROM availability").fetchall()) if con.execute("SELECT 1 FROM information_schema.tables WHERE table_name='availability'").fetchone() else {}
-    gone_harvest = {(j, a) for j, a in con.execute(
-        "SELECT jurisdiction, app_id FROM apps WHERE gone_from_store").fetchall()}
+    # issue #1: harvest absence (gone_from_store) is not a deletion; only the
+    # storefront recheck (availability.status == 'deleted') earns platform_removed.
     n = 0
     for app in rows:
         key = (app["jurisdiction"], app["app_id"])
@@ -194,7 +194,7 @@ def score_all(con):
             for adj_id, cfg in adj.items():
                 if cfg.get("status") != "active":
                     continue
-                if adj_id == "platform_removed" and (av.get(key) == "deleted" or key in gone_harvest):
+                if adj_id == "platform_removed" and av.get(key) == "deleted":
                     comp += cfg["points"]
                     allflags.append("platform_removed")
         else:
