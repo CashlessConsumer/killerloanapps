@@ -13,7 +13,29 @@ LABEL="${1:-$(date +%F)}"
 LIVE_CC="${LIVE_CC-in lk}"
 SKIP_HARVEST="${SKIP_HARVEST:-0}"
 LOG="data/refresh-${LABEL}.log"
+LOCK="data/.refresh.lock"
 mkdir -p data
+
+# issue #3: single writer + fail-loud. A 2026-09-28 run died at the availability
+# recheck leaving a dirty tree and a truncated log with no failure marker.
+if [ -e "$LOCK" ] && kill -0 "$(cat "$LOCK")" 2>/dev/null; then
+  echo "refresh already running (pid $(cat "$LOCK")); refusing to race" && exit 1
+fi
+echo $$ > "$LOCK"
+trap 'rm -f "$LOCK"' EXIT
+if ! git diff --quiet || ! git diff --cached --quiet; then
+  echo "=== FAILED: dirty working tree (commit or clean before refreshing) ===" | tee -a "$LOG"
+  exit 1
+fi
+
+step() { # step <name> <cmd...> — runs, and on failure writes an explicit marker then aborts
+  local name="$1"; shift
+  echo "--- $name ---"
+  if ! "$@"; then
+    echo "=== FAILED at step: $name ===" | tee -a "$LOG"
+    exit 1
+  fi
+}
 
 {
   echo "=== killerloanapps refresh $LABEL · $(date -u +%FT%TZ) ==="
@@ -21,25 +43,22 @@ mkdir -p data
     echo "--- harvest skipped (SKIP_HARVEST=1) ---"
   else
     for cc in $LIVE_CC; do
-      echo "--- harvest $cc ---"
-      python3 scripts/harvest.py --country "$cc" --label "$LABEL"
+      step "harvest $cc" python3 scripts/harvest.py --country "$cc" --label "$LABEL"
     done
   fi
-  echo "--- warehouse ---"
-  python3 scripts/build_warehouse.py
-  echo "--- availability recheck (live corpora) ---"
-  python3 scripts/check_deletions.py
-  echo "--- score ---"
-  python3 scripts/score.py
-  echo "--- site ---"
-  python3 scripts/build_site.py
+  step "warehouse" python3 scripts/build_warehouse.py
+  step "availability recheck" python3 scripts/check_deletions.py
+  step "score" python3 scripts/score.py
+  step "site" python3 scripts/build_site.py
   echo "--- publish ---"
   git add -A
   if git diff --cached --quiet; then
     echo "no changes to publish"
   else
+    VERDICTS="$(duckdb data/killerloanapps.duckdb -noheader -list -c "SELECT jurisdiction || ':' || status || '=' || COUNT(*) FROM availability GROUP BY 1,2 ORDER BY 1,2" | paste -sd' ' -)"
     git -c user.name="CashlessConsumer" -c user.email="cashlessconsumerin@gmail.com" \
-      commit -q -m "refresh $LABEL: harvest live corpora + availability + scores"
+      commit -q -m "refresh $LABEL: harvest live corpora + availability + scores" \
+      -m "availability: $VERDICTS"
     git push -q origin main
     echo "pushed $(git rev-parse --short HEAD)"
   fi
