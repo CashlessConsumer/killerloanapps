@@ -189,7 +189,7 @@ for n, (app_id, terms) in enumerate(candidates.items()):
 if a.seed:
     appsjson = os.path.join(ROOT, "data", "apps.json")
     known = [row for row in json.load(open(appsjson))["apps"]
-             if row["jurisdiction"].upper().startswith(CC.upper())]
+             if row["jurisdiction"].upper() == CC.upper()]
     already = set(candidates)
     seeded, gone = 0, 0
     print(f"seed: verifying {len(known)} known {CC.upper()} corpus ids")
