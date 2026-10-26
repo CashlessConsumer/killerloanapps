@@ -1,3 +1,4 @@
 data/killerloanapps.duckdb
 __pycache__/
 data/harvests/
+data/.refresh.lock

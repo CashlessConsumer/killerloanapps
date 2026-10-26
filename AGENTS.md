@@ -82,8 +82,8 @@ the cycle without a fresh harvest.
 ## Data provenance
 | Corpus | Source | Kind |
 |---|---|---|
-| `IN` | `data/harvests/IN_2026-09-21.db` (GPlayAPI v2) | live, re-harvested |
-| `LK` | `data/harvests/LK_2026-09-20.db` + `Datasets/loanapps-lk/` | live, re-harvested |
+| `IN` | `data/harvests/IN_2026-10-26.db` (GPlayAPI v2) | live, re-harvested |
+| `LK` | `data/harvests/LK_2026-10-26.db` (GPlayAPI v2; archived seed: `Datasets/loanapps-lk/`) | live, re-harvested |
 | `IN_2020_2022` | `Datasets/loanapps-in/loanapps_dbhub_20220227.db` | frozen historical (byte-exact dbhub copy) |
 | `NG_2022` | `Datasets/loanappsdata_NG.db` | frozen historical (DStudio x CC shared drive) |
 

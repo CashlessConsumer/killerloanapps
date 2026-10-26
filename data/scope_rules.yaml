@@ -5,7 +5,7 @@
 version: 1
 lending_keywords: [loan, lend, credit, cash, borrow, udhaar, paisa, emi, finance,
                    microfinance, payday, kredit, instant cash, salary advance]
-# Curated by hand, 2026-09-21 — add app ids here when a capture is clearly not a
+# Curated by hand, updated 2026-10-26 — add app ids here when a capture is clearly not a
 # lending product for this jurisdiction's consumers.
 out_of_scope_app_ids:
   # India — general-purpose payments / wallets
@@ -16,6 +16,9 @@ out_of_scope_app_ids:
   - net.one97.paytm
   - com.paytm.business
   - money.super.payments
+  - com.finexmoney.wallet
+  - com.tatadigital.tcp
+  - in.cashlo.merchant
   # India — banks' general apps and shopping
   - com.csam.icici.bank.imobile
   - com.idfcfirstbank.optimus
@@ -30,6 +33,30 @@ out_of_scope_app_ids:
   - com.bharatpe.app
   - com.jar.app
   - com.rupicard.score
+  - com.budrock.udhaar
+  - com.dreamboxstudio.udhaarrecover
+  - com.jlp.cft
+  - com.karobaar.karobaar
+  - com.loandrecorder.udhaardiray.debt
+  - com.mocpartnerportal
+  - com.muthootfincorpone.vyaparplus
+  - com.nishantsaluja.apnakhata
+  - com.offlinekhata.app
+  - com.pixelsdo.kredihesaplama
+  - com.saadahmed.merakhata
+  - com.sangaminfoanalytics.memoria
+  - com.sonu.creditbook
+  - com.udhari.app
+  - com.udharkhata.akhil
+  # India — foreign-market lenders captured by keyword search
+  - com.cmcm.uangme
+  - com.fintopia.idnEasycash.google
+  - com.iss.client.cairin
+  - com.kredito.fintek
+  - com.kreditpintar
+  - com.ktakilat.loan
+  - com.loan.cash.credit.easy.kilat.cepat.pinjam.uang.dana.rupiah
+  - com.onecard.kredinesia
   # Sri Lanka — non-lending or lenders operating elsewhere
   - com.wooricard.smartapp
   - com.pickme.passenger
@@ -45,4 +72,26 @@ out_of_scope_app_ids:
   - com.chippercash
   - com.fhl.salmon
   - com.tonik.mobile
+  # Sri Lanka — foreign apps, utilities and non-lending captures
+  - br.gov.caixa.fgts.trabalhador
+  - cashapp.com.squareup.cash.app
+  - com.degsware.loan_calculator
+  - com.easy.loan.app.get.loan.online
+  - com.emi.loan.calculator.homeloan.personalloan.carloan.sip.interest
+  - com.emicalculator.emi_calculator
+  - com.emicalculator.loancalculator.finacecalculator
+  - com.financeflow.loan.calc
+  - com.freecash.app2
+  - com.gojek.gopay
+  - com.happyverse.emicalculator
+  - com.instapop.inu
+  - com.kakoplay.loancalculator
+  - com.kredete.app
+  - com.loantools.proemi.easyfinance.calculator.app
+  - com.quick.loan.credit.cash.calc
+  - com.svprdga.debttracker
+  - com.tilicho.lendpal
+  - dev.nvalue.goloanly
+  - instant.loan.approval.cash.loan.com
+  - pk.com.telenor.phoenix
   - io.breezeventures.mb

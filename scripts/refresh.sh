@@ -52,6 +52,17 @@ step() { # step <name> <cmd...> — runs, and on failure writes an explicit mark
   step "availability recheck" python3 scripts/check_deletions.py
   step "score" python3 scripts/score.py
   step "site" python3 scripts/build_site.py
+  for cc in $LIVE_CC; do
+    prefix="$(printf '%s' "$cc" | tr '[:lower:]' '[:upper:]')"
+    mapfile -t snapshots < <(printf '%s\n' data/harvests/${prefix}_20??-??-??.db | sort -r)
+    if [ "${#snapshots[@]}" -gt 2 ]; then
+      for snapshot in "${snapshots[@]:2}"; do
+        [ -f "$snapshot" ] || continue
+        rm -f -- "$snapshot" "$snapshot-journal" "$snapshot-wal" "$snapshot-shm"
+        echo "pruned $snapshot"
+      done
+    fi
+  done
   echo "--- publish ---"
   git add -A
   if git diff --cached --quiet; then

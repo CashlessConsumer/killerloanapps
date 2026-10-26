@@ -17,10 +17,10 @@ Two classes of corpus, and the distinction matters when reading any page:
 
 | corpus_id | kind | Apps | Lending scope | Adjacent | Out of scope | Harvested | Gone from Play |
 |---|---|---|---|---|---|---|---|
-| `IN` | live | 229 | 175 | 28 | 26 | 2026-09-21 | 0 |
-| `LK` | live | 155 | 110 | 28 | 17 | 2026-09-20 | 0 |
-| `IN_2020_2022` | historical | 725 | 692 | 31 | 2 | 2022-02-27 | 655 |
-| `NG_2022` | historical | 126 | 100 | 26 | 0 | 2022-03-04 | 88 |
+| `IN` | live | 290 | 207 | 31 | 52 | 2026-10-26 | 5 |
+| `LK` | live | 280 | 194 | 47 | 39 | 2026-10-26 | 3 |
+| `IN_2020_2022` | historical | 725 | 681 | 31 | 13 | 2022-02-27 | 655 |
+| `NG_2022` | historical | 117 | 93 | 24 | 0 | 2022-03-04 | 88 |
 
 Headline counts on each page cover lending-scope apps only. Keyword harvesting pulls in noise
 (payments, shopping, ledgers, foreign listings); those captures stay in the data and are listed
@@ -84,10 +84,10 @@ weights) — the site says so on every affected page.
 
 | corpus | low | elevated | high | severe |
 |---|---|---|---|---|
-| `IN` (live, 2026) | 172 | 3 | 0 | 0 |
-| `LK` (live, 2026) | 91 | 19 | 0 | 0 |
-| `IN_2020_2022` | 41 | 424 | 222 | 5 |
-| `NG_2022` | 14 | 44 | 42 | 0 |
+| `IN` (live, 2026) | 198 | 9 | 0 | 0 |
+| `LK` (live, 2026) | 165 | 29 | 0 | 0 |
+| `IN_2020_2022` | 33 | 421 | 222 | 5 |
+| `NG_2022` | 12 | 39 | 42 | 0 |
 
 The 2026 live corpora score almost entirely `low` — not because the market is clean, but because
 Google Play's post-2022 listing rules now force the disclosure fields I2 and I3 measure. Legal-entity
