@@ -57,7 +57,7 @@ step() { # step <name> <cmd...> — runs, and on failure writes an explicit mark
   if git diff --cached --quiet; then
     echo "no changes to publish"
   else
-    VERDICTS="$(duckdb data/killerloanapps.duckdb -noheader -list -c "SELECT jurisdiction || ':' || status || '=' || COUNT(*) FROM availability GROUP BY 1,2 ORDER BY 1,2" | paste -sd' ' -)"
+    VERDICTS="$(duckdb data/killerloanapps.duckdb -noheader -list -c "SELECT jurisdiction || ':' || status || '=' || COUNT(*) FROM availability GROUP BY jurisdiction, status ORDER BY jurisdiction, status" | paste -sd' ' -)"
     git -c user.name="CashlessConsumer" -c user.email="cashlessconsumerin@gmail.com" \
       commit -q -m "refresh $LABEL: harvest live corpora + availability + scores" \
       -m "availability: $VERDICTS"

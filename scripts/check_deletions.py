@@ -52,7 +52,8 @@ def main(limit=None, only=None):
         s.close()
         # backfill: seeded rows wrongly carried last_live=TODAY from earlier runs
         con.execute("UPDATE deleted_log SET last_live = NULL "
-                    "WHERE note LIKE 'seeded from%' AND last_live = DATE ? AND first_missing < DATE ?", [TODAY, TODAY])
+                    "WHERE note LIKE 'seeded from%' AND last_live = CAST(? AS DATE) "
+                    "AND first_missing < CAST(? AS DATE)", [TODAY, TODAY])
     except Exception as e:
         print("seed:", e)
     # country + kind per corpus
