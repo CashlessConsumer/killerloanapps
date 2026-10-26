@@ -1,0 +1,47 @@
+=== killerloanapps refresh 2026-10-26 · 2026-10-26T02:03:50Z ===
+--- harvest skipped (SKIP_HARVEST=1) ---
+--- warehouse ---
+carried 1724 rows -> availability
+carried 1061 rows -> deleted_log
+prior apps.json: 1346 rows
+IN {'apps': 290, 'permissions': 3944, 'deleted': 0, 'snapshots': 4, 'gone_from_store': 27, 'corpus': 'India harvest 2026-09-21 via GPlayAPI v2 (killerloanapps playbook run)', 'country': 'in', 'status': 'live', 'harvested_on': '2026-10-26', 'source': '/home/workspace/Projects/killerloanapps/data/harvests/IN_2026-10-26.db'}
+LK {'apps': 280, 'permissions': 2747, 'deleted': 0, 'snapshots': 3, 'gone_from_store': 3, 'corpus': 'Sri Lanka harvest 2026-09-20 via GPlayAPI v2', 'country': 'lk', 'status': 'live', 'harvested_on': '2026-10-26', 'source': '/home/workspace/Projects/killerloanapps/data/harvests/LK_2026-10-26.db'}
+IN_2020_2022 {'apps': 725, 'permissions': 10772, 'deleted': 339, 'snapshots': 1, 'gone_from_store': 0, 'corpus': 'India corpus Dec 2020 - Feb 2022 (dbhub copy, byte-exact)', 'country': 'in', 'status': 'historical', 'harvested_on': '2022-02-27', 'source': '/home/workspace/Datasets/loanapps-in/loanapps_dbhub_20220227.db'}
+NG_2022 {'apps': 117, 'permissions': 2100, 'deleted': 0, 'snapshots': 1, 'gone_from_store': 0, 'corpus': 'Nigeria corpus Mar 2022 (DStudio x CC shared drive)', 'country': 'ng', 'status': 'historical', 'harvested_on': '2022-03-04', 'source': '/home/workspace/Datasets/loanappsdata_NG.db'}
+warehouse: /home/workspace/Projects/killerloanapps/data/killerloanapps.duckdb | apps.json: 1412
+--- availability recheck ---
+100/2476 {'live': 99, 'deleted': 1, 'error': 0}
+200/2476 {'live': 195, 'deleted': 5, 'error': 0}
+300/2476 {'live': 290, 'deleted': 10, 'error': 0}
+400/2476 {'live': 389, 'deleted': 11, 'error': 0}
+500/2476 {'live': 488, 'deleted': 12, 'error': 0}
+600/2476 {'live': 567, 'deleted': 33, 'error': 0}
+700/2476 {'live': 583, 'deleted': 117, 'error': 0}
+800/2476 {'live': 595, 'deleted': 205, 'error': 0}
+900/2476 {'live': 608, 'deleted': 292, 'error': 0}
+1000/2476 {'live': 618, 'deleted': 382, 'error': 0}
+1100/2476 {'live': 622, 'deleted': 478, 'error': 0}
+1200/2476 {'live': 626, 'deleted': 574, 'error': 0}
+1300/2476 {'live': 632, 'deleted': 668, 'error': 0}
+1400/2476 {'live': 632, 'deleted': 768, 'error': 0}
+1500/2476 {'live': 632, 'deleted': 868, 'error': 0}
+1600/2476 {'live': 632, 'deleted': 968, 'error': 0}
+1700/2476 {'live': 632, 'deleted': 1068, 'error': 0}
+1800/2476 {'live': 632, 'deleted': 1168, 'error': 0}
+1900/2476 {'live': 632, 'deleted': 1268, 'error': 0}
+2000/2476 {'live': 632, 'deleted': 1368, 'error': 0}
+2100/2476 {'live': 632, 'deleted': 1468, 'error': 0}
+2200/2476 {'live': 632, 'deleted': 1568, 'error': 0}
+2300/2476 {'live': 640, 'deleted': 1660, 'error': 0}
+2400/2476 {'live': 664, 'deleted': 1736, 'error': 0}
+DONE checked=2476 seeded=3 {'live': 664, 'deleted': 1812, 'error': 0}
+deleted_log IN: 5 | availability {'live': 285, 'deleted': 5}
+deleted_log LK: 3 | availability {'live': 277, 'deleted': 3}
+deleted_log IN_2020_2022: 965 | availability {'live': 72, 'deleted': 965}
+deleted_log NG_2022: 88 | availability {'live': 29, 'deleted': 88}
+--- score ---
+scored 1412 rows | [('low', 593), ('elevated', 540), ('high', 274), ('severe', 5)]
+wrote data/scores.json
+--- site ---
+site: index + 2 live + 2 historical corpus pages + 1412 app pages + deletions + methodology | /home/workspace/Projects/killerloanapps/site
+--- publish ---
